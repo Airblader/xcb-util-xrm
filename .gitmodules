@@ -1,0 +1,3 @@
+[submodule "m4"]
+	path = m4
+	url = git://anongit.freedesktop.org/xcb/util-common-m4.git

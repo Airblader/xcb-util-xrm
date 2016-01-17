@@ -1,0 +1,26 @@
+dnl XCB_UTIL_M4_WITH_INCLUDE_PATH requires Autoconf >= 2.62
+AC_PREREQ(2.62)
+AC_INIT([xcb-util-xrm],0.0.1,[xcb@lists.freedesktop.org])
+AC_CONFIG_SRCDIR([Makefile.am])
+AC_CONFIG_MACRO_DIR([m4])
+
+# Set common system defines for POSIX extensions, such as _GNU_SOURCE
+# Must be called before any macros that run the compiler (like AC_PROG_LIBTOOL)
+# to avoid autoconf errors.
+AC_USE_SYSTEM_EXTENSIONS
+
+AM_INIT_AUTOMAKE([foreign dist-bzip2])
+AM_MAINTAINER_MODE
+
+AC_TYPE_SSIZE_T
+
+XCB_UTIL_M4_WITH_INCLUDE_PATH
+XCB_UTIL_COMMON([1.4], [1.6])
+
+AC_CHECK_HEADERS([endian.h sys/endian.h sys/byteorder.h libkern/OSByteOrder.h], [break])
+AC_CHECK_FUNCS([le32toh])
+
+AC_OUTPUT([Makefile
+	xrm/Makefile xrm/xcb-xrm.pc
+	xcb_xrm_intro
+	])
