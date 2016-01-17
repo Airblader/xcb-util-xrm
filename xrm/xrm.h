@@ -33,11 +33,17 @@
 
 struct xcb_xrm_context_t {
     xcb_connection_t *conn;
+    xcb_screen_t *screen;
+
+    /* The unprocessed resource manager string. */
+    char *resources;
 };
 
 struct xcb_xrm_resource_t {
     unsigned int size;
     char *value;
 };
+
+int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx);
 
 #endif /* __XRM_H__ */

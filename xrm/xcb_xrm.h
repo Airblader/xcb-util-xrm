@@ -53,7 +53,7 @@ typedef struct xcb_xrm_resource_t xcb_xrm_resource_t;
  * TODO Documentation
  *
  */
-int xcb_xrm_context_new(xcb_connection_t *conn, xcb_xrm_context_t **ctx);
+int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_context_t **ctx);
 
 /**
  * TODO Documentation
