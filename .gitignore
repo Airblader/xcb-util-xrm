@@ -78,3 +78,8 @@ core
 #
 xcb_xrm_intro
 vgcore.*
+test-suite.log
+*.dirstamp
+tests/test
+tests/*.log
+tests/*.trs

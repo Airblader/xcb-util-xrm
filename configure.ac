@@ -9,7 +9,7 @@ AC_CONFIG_MACRO_DIR([m4])
 # to avoid autoconf errors.
 AC_USE_SYSTEM_EXTENSIONS
 
-AM_INIT_AUTOMAKE([foreign dist-bzip2])
+AM_INIT_AUTOMAKE([foreign dist-bzip2 subdir-objects])
 AM_MAINTAINER_MODE
 
 AC_TYPE_SSIZE_T
