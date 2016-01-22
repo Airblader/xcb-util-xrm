@@ -26,39 +26,20 @@
  * authorization from the authors.
  *
  */
-#ifndef __XRM_H__
-#define __XRM_H__
+#ifndef __UTIL_H__
+#define __UTIL_H__
 
-// TODO XXX Should we include this ourselves?
-#include <sys/queue.h>
-#include <stdbool.h>
+#define FREE(p)          \
+    do {                 \
+        if (p != NULL) { \
+            free(p);     \
+            p = NULL;    \
+        }                \
+    } while (0)
 
-#include "xcb_xrm.h"
-#include "util.h"
-#include "entry.h"
+#undef MAX
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+#undef MIN
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
 
-struct xcb_xrm_context_t {
-    xcb_connection_t *conn;
-    xcb_screen_t *screen;
-
-    /* The unprocessed resource manager string. */
-    char *resources;
-};
-
-struct xcb_xrm_resource_t {
-    unsigned int size;
-    char *value;
-};
-
-/**
- * Initializes the database for the context by parsing the resource manager
- * property.
- *
- * @param ctx Context.
- *
- * @return 0 on success, a negative error code otherwise.
- *
- */
-int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx);
-
-#endif /* __XRM_H__ */
+#endif /* __UTIL_H__ */
