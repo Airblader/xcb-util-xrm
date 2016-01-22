@@ -40,7 +40,7 @@
 int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_context_t **c) {
     xcb_xrm_context_t *ctx = NULL;
 
-    if ((*c = calloc(1, sizeof(*c))) == NULL) {
+    if ((*c = calloc(1, sizeof(struct xcb_xrm_context_t))) == NULL) {
         *c = NULL;
         return -ENOMEM;
     }
@@ -64,7 +64,7 @@ int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
 
     rm_reply = xcb_get_property_reply(ctx->conn, rm_cookie, &err);
     if (err != NULL) {
-        free(err);
+        FREE(err);
         return -1;
     }
 
@@ -76,33 +76,199 @@ int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
     }
 
     /* Copy the resource string. */
-    if (ctx->resources != NULL) {
-        free(ctx->resources);
-    }
+    FREE(ctx->resources);
     if (asprintf(&(ctx->resources), "%.*s", rm_length, (char *)xcb_get_property_value(rm_reply)) == -1) {
         return -ENOMEM;
     }
 
     /* We don't need this anymore. */
-    free(rm_reply);
+    FREE(rm_reply);
 
     /* Parse the resource string. */
-    // TODO XXX
+    for (char *line = strtok(ctx->resources, "\n"); line != NULL; line = strtok(NULL, "\n")) {
+        xcb_xrm_entry_t *entry;
+        xcb_xrm_parse_entry(line, &entry, false);
+
+        // TODO XXX Save those entries in a database type.
+    }
 
     return 0;
 }
 
-void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
-    if (ctx->resources != NULL)
-        free(ctx->resources);
+// TODO XXX Move all of these to a separate file
+static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_state_t *state,
+        const char str) {
+    if (state->buffer_pos == NULL) {
+        memset(&(state->buffer), 0, sizeof(state->buffer));
+        state->buffer_pos = state->buffer;
+    }
 
-    free(ctx);
+    *(state->buffer_pos++) = str;
+}
+
+// TODO propgate this result code
+static int xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
+        const char *str) {
+    xcb_xrm_component_t *new;
+    if ((new = calloc(1, sizeof(struct xcb_xrm_component_t))) == NULL) {
+        return -ENOMEM;
+    }
+
+    if (str != NULL) {
+        if ((new->name = strdup(str)) == NULL) {
+            return -ENOMEM;
+        }
+    }
+
+    new->type = type;
+    TAILQ_INSERT_TAIL(&(entry->components), new, components);
+    return 0;
+}
+
+static void xcb_xrm_finalize_component(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_state_t *state) {
+    if (state->buffer_pos != NULL && state->buffer_pos != state->buffer) {
+        *(state->buffer_pos) = '\0';
+        xcb_xrm_insert_component(entry, state->current_type, state->buffer);
+    }
+
+    memset(&(state->buffer), 0, sizeof(state->buffer));
+    state->buffer_pos = state->buffer;
+    state->current_type = CT_NORMAL;
+}
+
+static void xcb_xrm_append_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
+        xcb_xrm_entry_parser_state_t *state, const char *str) {
+    xcb_xrm_finalize_component(entry, state);
+    xcb_xrm_insert_component(entry, type, str);
+}
+
+int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wildcards) {
+    char *str;
+    char *walk;
+    xcb_xrm_entry_t *entry = NULL;
+    char value_buf[4096];
+    char *value_pos = value_buf;
+
+    xcb_xrm_entry_parser_state_t state = {
+        .chunk = CS_INITIAL,
+        .current_type = CT_NORMAL,
+    };
+
+    /* Copy the input string since it's const. */
+    if ((str = strdup(_str)) == NULL)
+        return -ENOMEM;
+
+    /* Allocate memory for the return parameter. */
+    if ((*_entry = calloc(1, sizeof(struct xcb_xrm_entry_t))) == NULL) {
+        *_entry = NULL;
+        return -ENOMEM;
+    }
+    entry = *_entry;
+    TAILQ_INIT(&(entry->components));
+
+    // TODO Respect no_wildcards argument
+    for (walk = str; *walk != '\0'; walk++) {
+        switch (*walk) {
+            case '.':
+                state.chunk = MAX(state.chunk, CS_COMPONENTS);
+                xcb_xrm_finalize_component(entry, &state);
+                state.current_type = CT_NORMAL;
+                break;
+            case '?':
+                state.chunk = MAX(state.chunk, CS_COMPONENTS);
+                xcb_xrm_append_component(entry, CT_WILDCARD_SINGLE, &state, NULL);
+                break;
+            case '*':
+                // TODO XXX If the previous component was already a
+                // CT_WILDCARD_MULTI, we could ignore this one.
+
+                state.chunk = MAX(state.chunk, CS_COMPONENTS);
+                xcb_xrm_append_component(entry, CT_WILDCARD_MULTI, &state, NULL);
+                break;
+            case ' ':
+            case '\t':
+                /* Spaces are only allowed in the value, but spaces between the
+                 * ':' and the value are omitted. */
+                if (state.chunk <= CS_PRE_VALUE_WHITESPACE) {
+                    break;
+                }
+
+                goto process_normally;
+            case ':':
+                // TODO XXX We should also handle state.chunk == CS_INITIAL
+                // here, even though it's an exotic case.
+                if (state.chunk == CS_COMPONENTS) {
+                    xcb_xrm_finalize_component(entry, &state);
+                    state.chunk = CS_PRE_VALUE_WHITESPACE;
+                    break;
+                } else if (state.chunk >= CS_PRE_VALUE_WHITESPACE) {
+                    state.chunk = CS_VALUE;
+                    goto process_normally;
+                }
+                break;
+            default:
+process_normally:
+                state.chunk = MAX(state.chunk, CS_COMPONENTS);
+
+                if (state.chunk == CS_PRE_VALUE_WHITESPACE) {
+                    state.chunk = CS_VALUE;
+                }
+
+                if (state.chunk < CS_VALUE) {
+                    xcb_xrm_append_char(entry, &state, *walk);
+                } else {
+                    *(value_pos++) = *walk;
+                }
+                break;
+        }
+    }
+    FREE(str);
+
+    *value_pos = '\0';
+    // TODO XXX Error handling
+    entry->value = strdup(value_buf);
+
+    // TODO Validate that we had components + value
+    // TODO Validate last component is CT_NORMAL
+
+    return 0;
+}
+
+void xcb_xrm_entry_free(xcb_xrm_entry_t *entry) {
+    xcb_xrm_component_t *component;
+    if (entry == NULL)
+        return;
+
+    FREE(entry->value);
+    while (!TAILQ_EMPTY(&(entry->components))) {
+        component = TAILQ_FIRST(&(entry->components));
+        FREE(component->name);
+        TAILQ_REMOVE(&(entry->components), component, components);
+        FREE(component);
+    }
+
+    FREE(entry);
+    return;
+}
+
+void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
+    FREE(ctx->resources);
+
+    // TODO XXX Free the database
+
+    FREE(ctx);
 }
 
 int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
                          char **res_type, xcb_xrm_resource_t *resource) {
-    // TODO XXX See if ctx->resources == NULL first
+    if (ctx->resources == NULL) {
+        *res_type = NULL;
+        resource->size = 0;
+        resource->value = (char *) NULL;
+        return -1;
+    }
 
-    // TODO XXX
+    // TODO XXX Implement matching algorithm
+    //  Note: last component (resource name) is case insensitive, others aren't.
     return -1;
 }
