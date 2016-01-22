@@ -21,6 +21,6 @@ AC_CHECK_HEADERS([endian.h sys/endian.h sys/byteorder.h libkern/OSByteOrder.h], 
 AC_CHECK_FUNCS([le32toh])
 
 AC_OUTPUT([Makefile
-	xrm/xcb-xrm.pc
+	xcb-xrm.pc
 	xcb_xrm_intro
 	])
