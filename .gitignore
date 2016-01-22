@@ -77,3 +77,4 @@ core
 # For example, !report.pc overrides *.pc. See 'man gitignore'
 #
 xcb_xrm_intro
+vgcore.*
