@@ -54,9 +54,7 @@ static int xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_ty
     }
 
     if (str != NULL) {
-        if ((new->name = strdup(str)) == NULL) {
-            return -ENOMEM;
-        }
+        new->name = sstrdup(str);
     }
 
     new->type = type;
@@ -94,8 +92,7 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
     };
 
     /* Copy the input string since it's const. */
-    if ((str = strdup(_str)) == NULL)
-        return -ENOMEM;
+    str = sstrdup(_str);
 
     /* Allocate memory for the return parameter. */
     if ((*_entry = calloc(1, sizeof(struct xcb_xrm_entry_t))) == NULL) {
@@ -164,8 +161,7 @@ process_normally:
     FREE(str);
 
     *value_pos = '\0';
-    // TODO XXX Error handling
-    entry->value = strdup(value_buf);
+    entry->value = sstrdup(value_buf);
 
     // TODO Validate that we had components + value
     // TODO Validate last component is CT_NORMAL

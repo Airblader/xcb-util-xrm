@@ -26,22 +26,21 @@
  * authorization from the authors.
  *
  */
-#ifndef __UTIL_H__
-#define __UTIL_H__
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include <ctype.h>
+#include <err.h>
+#include <errno.h>
 
-#define FREE(p)          \
-    do {                 \
-        if (p != NULL) { \
-            free(p);     \
-            p = NULL;    \
-        }                \
-    } while (0)
+#include "util.h"
 
-#undef MAX
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#undef MIN
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
+char *sstrdup(const char *str) {
+    char *result = strdup(str);
+    if (result == NULL) {
+        err(-ENOMEM, "strdup() failed!");
+    }
 
-char *sstrdup(const char *str);
-
-#endif /* __UTIL_H__ */
+    return result;
+}
