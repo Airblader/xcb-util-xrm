@@ -115,6 +115,7 @@ static int check_parse_entry(const char *str, const char *value, const int count
     }
     va_end(ap);
 
+    xcb_xrm_entry_free(entry);
     return err;
 }
 
