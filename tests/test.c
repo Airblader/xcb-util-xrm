@@ -150,6 +150,11 @@ static int test_entry_parser(void) {
     err |= check_parse_entry("*Menu.color10:\t#000000", "#000000", 3, "*", "Menu", "color10");
     err |= check_parse_entry("?Foo.Bar?Baz?la:\t\t \tA\tB C:D ", "A\tB C:D ", 7,
             "?", "Foo", "Bar", "?", "Baz", "?", "la");
+    err |= check_parse_entry("Foo**baz: x", "x", 3, "Foo", "*", "baz");
+    // TODO XXX These should come back invalid, add tests
+    // Foo?: baz
+    // Foo? baz
+    // : Foo
 
     return err;
 }

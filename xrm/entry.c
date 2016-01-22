@@ -83,6 +83,7 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
     char *str;
     char *walk;
     xcb_xrm_entry_t *entry = NULL;
+    xcb_xrm_component_t *last;
     char value_buf[4096];
     char *value_pos = value_buf;
 
@@ -115,8 +116,11 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
                 xcb_xrm_append_component(entry, CT_WILDCARD_SINGLE, &state, NULL);
                 break;
             case '*':
-                // TODO XXX If the previous component was already a
-                // CT_WILDCARD_MULTI, we could ignore this one.
+                /* We can ignore a '*' if the previous component was also one. */
+                last = TAILQ_LAST(&(entry->components), components_head);
+                if (last != NULL && last->type == CT_WILDCARD_MULTI) {
+                    break;
+                }
 
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
                 xcb_xrm_append_component(entry, CT_WILDCARD_MULTI, &state, NULL);
