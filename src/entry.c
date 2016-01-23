@@ -164,11 +164,29 @@ process_normally:
     }
     FREE(str);
 
-    *value_pos = '\0';
-    entry->value = sstrdup(value_buf);
+    if (state.chunk == CS_VALUE) {
+        *value_pos = '\0';
+        entry->value = sstrdup(value_buf);
+    } else {
+        /* Return error if there was no value for this entry. */
+        xcb_xrm_entry_free(entry);
+        *_entry = NULL;
+        return -1;
+    }
 
-    // TODO Validate that we had components + value
-    // TODO Validate last component is CT_NORMAL
+    /* Assert that this entry actually had a resource component. */
+    if ((last = TAILQ_LAST(&(entry->components), components_head)) == NULL) {
+        xcb_xrm_entry_free(entry);
+        *_entry = NULL;
+        return -1;
+    }
+
+    /* Assert that the last component is not a wildcard. */
+    if (last->type != CT_NORMAL) {
+        xcb_xrm_entry_free(entry);
+        *_entry = NULL;
+        return -1;
+    }
 
     return 0;
 }

@@ -86,8 +86,9 @@ static int check_parse_entry(const char *str, const char *value, const int count
         return true;
     }
 
-    /* Assert the entry's value. */
     bool err = false;
+
+    /* Assert the entry's value. */
     err |= check_strings(value, entry->value, "Wrong entry value: <%s> / <%s>\n", value, entry->value);
 
     /* Assert the number of components. */
@@ -117,6 +118,13 @@ static int check_parse_entry(const char *str, const char *value, const int count
 
     xcb_xrm_entry_free(entry);
     return err;
+}
+
+static int check_parse_entry_error(const char *str, const int result) {
+    xcb_xrm_entry_t *entry;
+    int actual = xcb_xrm_parse_entry(str, &entry, false);
+
+    return check_ints(result, actual, "Wrong result code: <%d> / <%d>\n", result, actual);
 }
 
 static int test_entry_parser(void) {
@@ -152,10 +160,14 @@ static int test_entry_parser(void) {
     err |= check_parse_entry("?Foo.Bar?Baz?la:\t\t \tA\tB C:D ", "A\tB C:D ", 7,
             "?", "Foo", "Bar", "?", "Baz", "?", "la");
     err |= check_parse_entry("Foo**baz: x", "x", 3, "Foo", "*", "baz");
-    // TODO XXX These should come back invalid, add tests
-    // Foo?: baz
-    // Foo? baz
-    // : Foo
+
+    err |= check_parse_entry_error("Foo?: x", -1);
+    err |= check_parse_entry_error("Foo*: x", -1);
+    err |= check_parse_entry_error(": x", -1);
+    err |= check_parse_entry_error("Foo", -1);
+    err |= check_parse_entry_error("Foo? Bar", -1);
+
+    // TODO XXX Tests for no_wildcards
 
     return err;
 }
