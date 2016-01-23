@@ -169,26 +169,25 @@ process_normally:
         entry->value = sstrdup(value_buf);
     } else {
         /* Return error if there was no value for this entry. */
-        xcb_xrm_entry_free(entry);
-        *_entry = NULL;
-        return -1;
+        goto done_error;
     }
 
     /* Assert that this entry actually had a resource component. */
     if ((last = TAILQ_LAST(&(entry->components), components_head)) == NULL) {
-        xcb_xrm_entry_free(entry);
-        *_entry = NULL;
-        return -1;
+        goto done_error;
     }
 
     /* Assert that the last component is not a wildcard. */
     if (last->type != CT_NORMAL) {
-        xcb_xrm_entry_free(entry);
-        *_entry = NULL;
-        return -1;
+        goto done_error;
     }
 
     return 0;
+
+done_error:
+    xcb_xrm_entry_free(entry);
+    *_entry = NULL;
+    return -1;
 }
 
 void xcb_xrm_entry_free(xcb_xrm_entry_t *entry) {
