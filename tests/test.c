@@ -81,6 +81,8 @@ static int check_parse_entry(const char *str, const char *value, const int count
     int actual_length = 0;
     va_list ap;
 
+    fprintf(stderr, "== Assert that parsing \"%s\" is successful\n", str);
+
     if (xcb_xrm_parse_entry(str, &entry, false) < 0) {
         fprintf(stderr, "xcb_xrm_parse_entry() < 0\n");
         return true;
@@ -122,8 +124,11 @@ static int check_parse_entry(const char *str, const char *value, const int count
 
 static int check_parse_entry_error(const char *str, const int result) {
     xcb_xrm_entry_t *entry;
-    int actual = xcb_xrm_parse_entry(str, &entry, false);
+    int actual;
 
+    fprintf(stderr, "== Assert that parsing \"%s\" returns <%d>\n", str, result);
+
+    actual = xcb_xrm_parse_entry(str, &entry, false);
     return check_ints(result, actual, "Wrong result code: <%d> / <%d>\n", result, actual);
 }
 
