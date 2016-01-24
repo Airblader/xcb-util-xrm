@@ -35,6 +35,7 @@
 #include <xcb/xcb.h>
 
 #include "xrm.h"
+#include "entry.h"
 #include "util.h"
 
 int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_context_t **c) {
@@ -50,9 +51,16 @@ int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_co
 }
 
 void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
+    xcb_xrm_entry_t *entry;
+
     FREE(ctx->resources);
 
-    // TODO XXX Free the database
+    while (!TAILQ_EMPTY(&(ctx->entries))) {
+        entry = TAILQ_FIRST(&(ctx->entries));
+        xcb_xrm_entry_free(entry);
+        TAILQ_REMOVE(&(ctx->entries), entry, entries);
+        FREE(entry);
+    }
 
     FREE(ctx);
 }
@@ -117,7 +125,7 @@ int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
         xcb_xrm_entry_t *entry;
         xcb_xrm_parse_entry(line, &entry, false);
 
-        // TODO XXX Save those entries in a database type.
+        TAILQ_INSERT_TAIL(&(ctx->entries), entry, entries);
     }
 
     return 0;

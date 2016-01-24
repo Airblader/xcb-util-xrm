@@ -80,6 +80,8 @@ typedef struct xcb_xrm_entry_t {
 
     /* The individual components making up this entry. */
     TAILQ_HEAD(components_head, xcb_xrm_component_t) components;
+
+    TAILQ_ENTRY(xcb_xrm_entry_t) entries;
 } xcb_xrm_entry_t;
 
 /**

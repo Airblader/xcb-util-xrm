@@ -29,7 +29,6 @@
 #ifndef __XRM_H__
 #define __XRM_H__
 
-// TODO XXX Should we include this ourselves?
 #include <sys/queue.h>
 #include <stdbool.h>
 
@@ -43,6 +42,8 @@ struct xcb_xrm_context_t {
 
     /* The unprocessed resource manager string. */
     char *resources;
+
+    TAILQ_HEAD(database_head, xcb_xrm_entry_t) entries;
 };
 
 struct xcb_xrm_resource_t {
