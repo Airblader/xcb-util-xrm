@@ -35,6 +35,11 @@
 #include "entry.h"
 #include "util.h"
 
+/**
+ * Appends a single character to the current buffer.
+ * If the buffer is not yet initialized or has been invalidated, it will be set up.
+ *
+ */
 static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_state_t *state,
         const char str) {
     if (state->buffer_pos == NULL) {
@@ -45,6 +50,11 @@ static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_sta
     *(state->buffer_pos++) = str;
 }
 
+/**
+ * Insert a new component of the given type.
+ * This function does not check whether there is an open buffer.
+ *
+ */
 static void xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
         const char *str) {
     xcb_xrm_component_t *new;
@@ -59,6 +69,11 @@ static void xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_t
     TAILQ_INSERT_TAIL(&(entry->components), new, components);
 }
 
+/**
+ * Finalize the current buffer by writing it into a component if necessary.
+ * This function also resets the buffer to a clean slate.
+ *
+ */
 static void xcb_xrm_finalize_component(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_state_t *state) {
     if (state->buffer_pos != NULL && state->buffer_pos != state->buffer) {
         *(state->buffer_pos) = '\0';
@@ -70,12 +85,28 @@ static void xcb_xrm_finalize_component(xcb_xrm_entry_t *entry, xcb_xrm_entry_par
     state->current_type = CT_NORMAL;
 }
 
+/**
+ * Append a new component of the given type.
+ * This function checks whether there is an open buffer and finalizes it if necessary.
+ *
+ */
 static void xcb_xrm_append_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
         xcb_xrm_entry_parser_state_t *state, const char *str) {
     xcb_xrm_finalize_component(entry, state);
     xcb_xrm_insert_component(entry, type, str);
 }
 
+/*
+ * Parses a specific resource string.
+ *
+ * @param str The resource string.
+ * @param entry A return struct that will contain the parsed resource. The
+ * memory will be allocated dynamically, so it must be freed.
+ * @param no_wildcards If true, only components of type CT_NORMAL are allowed.
+ *
+ * @return 0 on success, a negative error code otherwise.
+ *
+ */
 int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wildcards) {
     char *str;
     char *walk;
@@ -203,6 +234,12 @@ done_error:
     return -1;
 }
 
+/*
+ * Frees the given entry.
+ *
+ * @param entry The entry to be freed.
+ *
+ */
 void xcb_xrm_entry_free(xcb_xrm_entry_t *entry) {
     xcb_xrm_component_t *component;
     if (entry == NULL)

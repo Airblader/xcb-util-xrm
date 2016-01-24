@@ -98,6 +98,8 @@ int xcb_xrm_parse_entry(const char *str, xcb_xrm_entry_t **entry, bool no_wildca
 /**
  * Frees the given entry.
  *
+ * @param entry The entry to be freed.
+ *
  */
 void xcb_xrm_entry_free(xcb_xrm_entry_t *entry);
 
