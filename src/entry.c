@@ -103,12 +103,11 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
     entry = *_entry;
     TAILQ_INIT(&(entry->components));
 
-    // TODO Respect no_wildcards argument
     for (walk = str; *walk != '\0'; walk++) {
         switch (*walk) {
             case '.':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
-                if (state.chunk == CS_VALUE) {
+                if (state.chunk >= CS_PRE_VALUE_WHITESPACE) {
                     goto process_normally;
                 }
 
@@ -117,16 +116,24 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
                 break;
             case '?':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
-                if (state.chunk == CS_VALUE) {
+                if (state.chunk >= CS_PRE_VALUE_WHITESPACE) {
                     goto process_normally;
+                }
+
+                if (no_wildcards) {
+                    goto done_error;
                 }
 
                 xcb_xrm_append_component(entry, CT_WILDCARD_SINGLE, &state, NULL);
                 break;
             case '*':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
-                if (state.chunk == CS_VALUE) {
+                if (state.chunk >= CS_PRE_VALUE_WHITESPACE) {
                     goto process_normally;
+                }
+
+                if (no_wildcards) {
+                    goto done_error;
                 }
 
                 /* We can ignore a '*' if the previous component was also one. */

@@ -41,6 +41,8 @@
 
 #define SKIP 77
 
+static bool check_parse_entry_no_wildcards;
+
 static bool check_strings(const char *expected, const char *actual,
         const char *format, ...) ATTRIBUTE_PRINTF(3, 4);
 static bool check_ints(const int expected, const int actual,
@@ -83,7 +85,7 @@ static int check_parse_entry(const char *str, const char *value, const int count
 
     fprintf(stderr, "== Assert that parsing \"%s\" is successful\n", str);
 
-    if (xcb_xrm_parse_entry(str, &entry, false) < 0) {
+    if (xcb_xrm_parse_entry(str, &entry, check_parse_entry_no_wildcards) < 0) {
         fprintf(stderr, "xcb_xrm_parse_entry() < 0\n");
         return true;
     }
@@ -128,7 +130,7 @@ static int check_parse_entry_error(const char *str, const int result) {
 
     fprintf(stderr, "== Assert that parsing \"%s\" returns <%d>\n", str, result);
 
-    actual = xcb_xrm_parse_entry(str, &entry, false);
+    actual = xcb_xrm_parse_entry(str, &entry, check_parse_entry_no_wildcards);
     return check_ints(result, actual, "Wrong result code: <%d> / <%d>\n", result, actual);
 }
 
@@ -159,6 +161,8 @@ static int test_entry_parser(void) {
     }
 #endif
 
+    check_parse_entry_no_wildcards = false;
+
     /* Basic parsing */
     err |= check_parse_entry("Xft.dpi: 96", "96", 2, "Xft", "dpi");
     err |= check_parse_entry("*color0: #abcdef", "#abcdef", 2, "*", "color0");
@@ -186,7 +190,18 @@ static int test_entry_parser(void) {
     err |= check_parse_entry_error("Foo", -1);
     err |= check_parse_entry_error("Foo? Bar", -1);
 
-    // TODO XXX Tests for no_wildcards
+    /* Test for disallowing wildcards. */
+    check_parse_entry_no_wildcards = true;
+
+    err |= check_parse_entry("Foo.baz: on", "on", 2, "Foo", "baz");
+    err |= check_parse_entry("Foo.baz: *", "*", 2, "Foo", "baz");
+    err |= check_parse_entry("Foo.baz: ?", "?", 2, "Foo", "baz");
+    err |= check_parse_entry("Foo.baz: on?off", "on?off", 2, "Foo", "baz");
+    err |= check_parse_entry("Foo.baz: on*off", "on*off", 2, "Foo", "baz");
+    err |= check_parse_entry_error("Foo*baz: on", -1);
+    err |= check_parse_entry_error("Foo?baz: on", -1);
+    err |= check_parse_entry_error("*baz: on", -1);
+    err |= check_parse_entry_error("?baz: on", -1);
 
     return err;
 }
