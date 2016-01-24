@@ -71,6 +71,15 @@ int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const cha
     return -1;
 }
 
+/*
+ * Initializes the database for the context by parsing the resource manager
+ * property.
+ *
+ * @param ctx Context.
+ *
+ * @return 0 on success, a negative error code otherwise.
+ *
+ */
 int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
     xcb_get_property_cookie_t rm_cookie;
     xcb_get_property_reply_t *rm_reply;
