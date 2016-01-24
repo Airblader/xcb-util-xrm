@@ -132,7 +132,6 @@ int xcb_xrm_parse_database_from_string(xcb_xrm_context_t *ctx, const char *str) 
  * @return 0 on success, a negative error code otherwise.
  *
  */
-// TODO XXX Define or handle calling this multiple times.
 int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
     xcb_get_property_cookie_t rm_cookie;
     xcb_get_property_reply_t *rm_reply;
