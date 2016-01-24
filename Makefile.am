@@ -2,6 +2,8 @@ ACLOCAL_AMFLAGS = -I m4
 
 MAINTAINERCLEANFILES = ChangeLog INSTALL Makefile.in
 
+TEST_LIBS = $(shell pkg-config --libs xcb-aux)
+
 .PHONY: ChangeLog INSTALL
 
 INSTALL:
@@ -32,3 +34,4 @@ check_PROGRAMS = tests/test
 tests_test_SOURCE = tests/test.c
 tests_test_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS)
 tests_test_LDADD = libxcb-xrm.la $(XCB_LIBS)
+tests_test_LDFLAGS = $(TEST_LIBS)

@@ -135,32 +135,27 @@ static int check_parse_entry_error(const char *str, const int result) {
     return check_ints(result, actual, "Wrong result code: <%d> / <%d>\n", result, actual);
 }
 
+static int check_get_resource(xcb_xrm_context_t *ctx, const char *database,
+        const char *res_name, const char *res_class, const char *value) {
+    bool err = false;
+    const char *type;
+    xcb_xrm_resource_t *resource;
+
+    xcb_xrm_parse_database_from_string(ctx, database);
+    if (xcb_xrm_get_resource(ctx, res_name, res_class, &type, &resource) < 0) {
+        fprintf(stderr, "xcb_xrm_get_resource() < 0\n");
+        return true;
+    }
+
+    err |= check_strings("String", type, "Expected <String>, but got <%s>\n", type);
+    err |= check_strings(value, resource->value, "Expected <%s>, but got <%s>\n", value, resource->value);
+
+    xcb_xrm_resource_free(resource);
+    return err;
+}
+
 static int test_entry_parser(void) {
     bool err = false;
-#if 0
-    int screennr;
-    xcb_connection_t *conn;
-    xcb_screen_t *screen;
-    xcb_xrm_context_t *ctx;
-    bool err = false;
-
-    conn = xcb_connect(NULL, &screennr);
-    if (conn == NULL || xcb_connection_has_error(conn)) {
-        fprintf(stderr, "Failed to connect to X11 server.\n");
-        return true;
-    }
-
-    screen = xcb_aux_get_screen(conn, screennr);
-    if (screen == NULL) {
-        fprintf(stderr, "Failed to query root screen.\n");
-        return true;
-    }
-
-    if (xcb_xrm_context_new(conn, screen, &ctx) < 0) {
-        fprintf(stderr, "Failed to initialize context.\n");
-        return true;
-    }
-#endif
 
     check_parse_entry_no_wildcards = false;
 
@@ -207,10 +202,46 @@ static int test_entry_parser(void) {
     return err;
 }
 
+static int test_get_resource(void) {
+    int screennr;
+    xcb_connection_t *conn;
+    xcb_screen_t *screen;
+    xcb_xrm_context_t *ctx;
+    bool err = false;
+
+    conn = xcb_connect(NULL, &screennr);
+    if (conn == NULL || xcb_connection_has_error(conn)) {
+        fprintf(stderr, "Failed to connect to X11 server.\n");
+        return true;
+    }
+
+    screen = xcb_aux_get_screen(conn, screennr);
+    if (screen == NULL) {
+        fprintf(stderr, "Failed to query root screen.\n");
+        return true;
+    }
+
+    if (xcb_xrm_context_new(conn, screen, &ctx) < 0) {
+        fprintf(stderr, "Failed to initialize context.\n");
+        return true;
+    }
+
+    err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.dpi", "", "96");
+    err |= check_get_resource(ctx, "Foo.baz: on\nXft.dpi: 96\nNothing?to.see: off", "Xft.dpi", "", "96");
+
+    // TODO XXX Tests
+    //err |= check_get_resource("*theme: fun", "Cursor.theme", "", "fun");
+
+    xcb_xrm_context_free(ctx);
+    xcb_disconnect(conn);
+    return err;
+}
+
 int main(void) {
     bool err = false;
 
     err |= test_entry_parser();
+    err |= test_get_resource();
 
     return err;
 }

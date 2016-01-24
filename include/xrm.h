@@ -52,14 +52,13 @@ struct xcb_xrm_resource_t {
 };
 
 /**
- * Initializes the database for the context by parsing the resource manager
- * property.
+ * Interprets the string as a resource list, parses it and stores it in the database of the context.
  *
  * @param ctx Context.
- *
+ * @param str Resource string.
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx);
+int xcb_xrm_parse_database_from_string(xcb_xrm_context_t *ctx, const char *str);
 
 #endif /* __XRM_H__ */

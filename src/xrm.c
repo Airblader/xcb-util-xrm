@@ -38,6 +38,9 @@
 #include "entry.h"
 #include "util.h"
 
+/* Forward declarations */
+static void xcb_xrm_database_free(xcb_xrm_context_t *ctx);
+
 int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_context_t **c) {
     xcb_xrm_context_t *ctx = NULL;
 
@@ -47,36 +50,77 @@ int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_co
     ctx->conn = conn;
     ctx->screen = screen;
 
-    return xcb_xrm_initialize_database(ctx);
+    TAILQ_INIT(&(ctx->entries));
+
+    return 0;
 }
 
-void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
+static void xcb_xrm_database_free(xcb_xrm_context_t *ctx) {
     xcb_xrm_entry_t *entry;
 
     FREE(ctx->resources);
 
     while (!TAILQ_EMPTY(&(ctx->entries))) {
         entry = TAILQ_FIRST(&(ctx->entries));
-        xcb_xrm_entry_free(entry);
         TAILQ_REMOVE(&(ctx->entries), entry, entries);
-        FREE(entry);
+        xcb_xrm_entry_free(entry);
     }
+}
 
+void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
+    xcb_xrm_database_free(ctx);
     FREE(ctx);
 }
 
 int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
-                         char **res_type, xcb_xrm_resource_t *resource) {
-    if (ctx->resources == NULL) {
+                         const char **res_type, xcb_xrm_resource_t **_resource) {
+    xcb_xrm_resource_t *resource;
+
+    if (ctx->resources == NULL || TAILQ_EMPTY(&(ctx->entries))) {
         *res_type = NULL;
-        resource->size = 0;
-        resource->value = (char *) NULL;
+        *_resource = NULL;
         return -1;
     }
 
+    *res_type = "String";
+    *_resource = scalloc(1, sizeof(struct xcb_xrm_resource_t));
+    resource = *_resource;
+
     // TODO XXX Implement matching algorithm
     //  Note: last component (resource name) is case insensitive, others aren't.
-    return -1;
+    resource->size = 0;
+    resource->value = sstrdup("96");
+    return 0;
+}
+
+void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
+    FREE(resource->value);
+    FREE(resource);
+}
+
+/*
+ * Interprets the string as a resource list, parses it and stores it in the database of the context.
+ *
+ * @param ctx Context.
+ * @param str Resource string.
+ * @return 0 on success, a negative error code otherwise.
+ *
+ */
+int xcb_xrm_parse_database_from_string(xcb_xrm_context_t *ctx, const char *str) {
+    char *copy = sstrdup(str);
+
+    xcb_xrm_database_free(ctx);
+    ctx->resources = sstrdup(str);
+
+    for (char *line = strtok(copy, "\n"); line != NULL; line = strtok(NULL, "\n")) {
+        xcb_xrm_entry_t *entry;
+        if (xcb_xrm_parse_entry(line, &entry, false) == 0 && entry != NULL) {
+            TAILQ_INSERT_TAIL(&(ctx->entries), entry, entries);
+        }
+    }
+
+    FREE(copy);
+    return 0;
 }
 
 /*
@@ -88,11 +132,13 @@ int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const cha
  * @return 0 on success, a negative error code otherwise.
  *
  */
+// TODO XXX Define or handle calling this multiple times.
 int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
     xcb_get_property_cookie_t rm_cookie;
     xcb_get_property_reply_t *rm_reply;
     xcb_generic_error_t *err;
     int rm_length;
+    char *resources;
 
     // TODO XXX Be smarter here and really get the entire string, no matter how long it is.
     rm_cookie = xcb_get_property(ctx->conn, 0, ctx->screen->root, XCB_ATOM_RESOURCE_MANAGER,
@@ -111,9 +157,7 @@ int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
         return 0;
     }
 
-    /* Copy the resource string. */
-    FREE(ctx->resources);
-    if (asprintf(&(ctx->resources), "%.*s", rm_length, (char *)xcb_get_property_value(rm_reply)) == -1) {
+    if (asprintf(&resources, "%.*s", rm_length, (char *)xcb_get_property_value(rm_reply)) == -1) {
         return -ENOMEM;
     }
 
@@ -121,12 +165,5 @@ int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
     FREE(rm_reply);
 
     /* Parse the resource string. */
-    for (char *line = strtok(ctx->resources, "\n"); line != NULL; line = strtok(NULL, "\n")) {
-        xcb_xrm_entry_t *entry;
-        xcb_xrm_parse_entry(line, &entry, false);
-
-        TAILQ_INSERT_TAIL(&(ctx->entries), entry, entries);
-    }
-
-    return 0;
+    return xcb_xrm_parse_database_from_string(ctx, resources);
 }

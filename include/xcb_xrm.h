@@ -62,11 +62,28 @@ int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_co
 void xcb_xrm_context_free(xcb_xrm_context_t *ctx);
 
 /**
+ * Initializes the database for the context by parsing the resource manager
+ * property.
+ *
+ * @param ctx Context.
+ *
+ * @return 0 on success, a negative error code otherwise.
+ *
+ */
+int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx);
+
+/**
  * TODO Documentation
  *
  */
 int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
-                         char **res_type, xcb_xrm_resource_t *resource);
+                         const char **res_type, xcb_xrm_resource_t **resource);
+
+/**
+ * TODO Documentation
+ *
+ */
+void xcb_xrm_resource_free(xcb_xrm_resource_t *resource);
 
 #ifdef __cplusplus
 }
