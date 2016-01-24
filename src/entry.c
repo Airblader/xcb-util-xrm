@@ -108,22 +108,37 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
         switch (*walk) {
             case '.':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
-                xcb_xrm_finalize_component(entry, &state);
-                state.current_type = CT_NORMAL;
+
+                if (state.chunk < CS_VALUE) {
+                    xcb_xrm_finalize_component(entry, &state);
+                    state.current_type = CT_NORMAL;
+                } else {
+                    goto process_normally;
+                }
                 break;
             case '?':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
-                xcb_xrm_append_component(entry, CT_WILDCARD_SINGLE, &state, NULL);
+
+                if (state.chunk < CS_VALUE) {
+                    xcb_xrm_append_component(entry, CT_WILDCARD_SINGLE, &state, NULL);
+                } else {
+                    goto process_normally;
+                }
                 break;
             case '*':
-                /* We can ignore a '*' if the previous component was also one. */
-                last = TAILQ_LAST(&(entry->components), components_head);
-                if (last != NULL && last->type == CT_WILDCARD_MULTI) {
-                    break;
-                }
-
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
-                xcb_xrm_append_component(entry, CT_WILDCARD_MULTI, &state, NULL);
+
+                if (state.chunk < CS_VALUE) {
+                    /* We can ignore a '*' if the previous component was also one. */
+                    last = TAILQ_LAST(&(entry->components), components_head);
+                    if (last != NULL && last->type == CT_WILDCARD_MULTI) {
+                        break;
+                    }
+
+                    xcb_xrm_append_component(entry, CT_WILDCARD_MULTI, &state, NULL);
+                } else {
+                    goto process_normally;
+                }
                 break;
             case ' ':
             case '\t':

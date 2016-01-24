@@ -165,6 +165,9 @@ static int test_entry_parser(void) {
     err |= check_parse_entry("?Foo.Bar?Baz?la:\t\t \tA\tB C:D ", "A\tB C:D ", 7,
             "?", "Foo", "Bar", "?", "Baz", "?", "la");
     err |= check_parse_entry("Foo**baz: x", "x", 3, "Foo", "*", "baz");
+    err |= check_parse_entry("Foo: x.y", "x.y", 1, "Foo");
+    err |= check_parse_entry("Foo: x?y", "x?y", 1, "Foo");
+    err |= check_parse_entry("Foo: x*y", "x*y", 1, "Foo");
 
     err |= check_parse_entry_error("Foo?: x", -1);
     err |= check_parse_entry_error("Foo*: x", -1);
