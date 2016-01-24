@@ -108,37 +108,34 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
         switch (*walk) {
             case '.':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
-
-                if (state.chunk < CS_VALUE) {
-                    xcb_xrm_finalize_component(entry, &state);
-                    state.current_type = CT_NORMAL;
-                } else {
+                if (state.chunk == CS_VALUE) {
                     goto process_normally;
                 }
+
+                xcb_xrm_finalize_component(entry, &state);
+                state.current_type = CT_NORMAL;
                 break;
             case '?':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
-
-                if (state.chunk < CS_VALUE) {
-                    xcb_xrm_append_component(entry, CT_WILDCARD_SINGLE, &state, NULL);
-                } else {
+                if (state.chunk == CS_VALUE) {
                     goto process_normally;
                 }
+
+                xcb_xrm_append_component(entry, CT_WILDCARD_SINGLE, &state, NULL);
                 break;
             case '*':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
-
-                if (state.chunk < CS_VALUE) {
-                    /* We can ignore a '*' if the previous component was also one. */
-                    last = TAILQ_LAST(&(entry->components), components_head);
-                    if (last != NULL && last->type == CT_WILDCARD_MULTI) {
-                        break;
-                    }
-
-                    xcb_xrm_append_component(entry, CT_WILDCARD_MULTI, &state, NULL);
-                } else {
+                if (state.chunk == CS_VALUE) {
                     goto process_normally;
                 }
+
+                /* We can ignore a '*' if the previous component was also one. */
+                last = TAILQ_LAST(&(entry->components), components_head);
+                if (last != NULL && last->type == CT_WILDCARD_MULTI) {
+                    break;
+                }
+
+                xcb_xrm_append_component(entry, CT_WILDCARD_MULTI, &state, NULL);
                 break;
             case ' ':
             case '\t':
