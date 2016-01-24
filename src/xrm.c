@@ -35,14 +35,12 @@
 #include <xcb/xcb.h>
 
 #include "xrm.h"
+#include "util.h"
 
 int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_context_t **c) {
     xcb_xrm_context_t *ctx = NULL;
 
-    if ((*c = calloc(1, sizeof(struct xcb_xrm_context_t))) == NULL) {
-        *c = NULL;
-        return -ENOMEM;
-    }
+    *c = scalloc(1, sizeof(struct xcb_xrm_context_t));
 
     ctx = *c;
     ctx->conn = conn;

@@ -44,4 +44,6 @@
 
 char *sstrdup(const char *str);
 
+void *scalloc(size_t num, size_t size);
+
 #endif /* __UTIL_H__ */

@@ -44,3 +44,12 @@ char *sstrdup(const char *str) {
 
     return result;
 }
+
+void *scalloc(size_t num, size_t size) {
+    void *result = calloc(num, size);
+    if (result == NULL) {
+        err(-ENOMEM, "calloc(%zd, %zd) failed!", num, size);
+    }
+
+    return result;
+}

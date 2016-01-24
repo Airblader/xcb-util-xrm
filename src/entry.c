@@ -45,13 +45,11 @@ static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_sta
     *(state->buffer_pos++) = str;
 }
 
-// TODO propgate this result code
-static int xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
+static void xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
         const char *str) {
     xcb_xrm_component_t *new;
-    if ((new = calloc(1, sizeof(struct xcb_xrm_component_t))) == NULL) {
-        return -ENOMEM;
-    }
+
+    new = scalloc(1, sizeof(struct xcb_xrm_component_t));
 
     if (str != NULL) {
         new->name = sstrdup(str);
@@ -59,7 +57,6 @@ static int xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_ty
 
     new->type = type;
     TAILQ_INSERT_TAIL(&(entry->components), new, components);
-    return 0;
 }
 
 static void xcb_xrm_finalize_component(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_state_t *state) {
@@ -96,10 +93,7 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
     str = sstrdup(_str);
 
     /* Allocate memory for the return parameter. */
-    if ((*_entry = calloc(1, sizeof(struct xcb_xrm_entry_t))) == NULL) {
-        *_entry = NULL;
-        return -ENOMEM;
-    }
+    *_entry = scalloc(1, sizeof(struct xcb_xrm_entry_t));
     entry = *_entry;
     TAILQ_INIT(&(entry->components));
 
