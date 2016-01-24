@@ -206,7 +206,6 @@ process_normally:
                 break;
         }
     }
-    FREE(str);
 
     if (state.chunk == CS_VALUE) {
         *value_pos = '\0';
@@ -226,9 +225,12 @@ process_normally:
         goto done_error;
     }
 
+    FREE(str);
     return 0;
 
 done_error:
+    FREE(str);
+
     xcb_xrm_entry_free(entry);
     *_entry = NULL;
     return -1;

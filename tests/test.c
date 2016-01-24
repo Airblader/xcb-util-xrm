@@ -131,6 +131,7 @@ static int check_parse_entry_error(const char *str, const int result) {
     fprintf(stderr, "== Assert that parsing \"%s\" returns <%d>\n", str, result);
 
     actual = xcb_xrm_parse_entry(str, &entry, check_parse_entry_no_wildcards);
+    xcb_xrm_entry_free(entry);
     return check_ints(result, actual, "Wrong result code: <%d> / <%d>\n", result, actual);
 }
 
