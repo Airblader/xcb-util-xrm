@@ -159,18 +159,29 @@ static int test_entry_parser(void) {
     }
 #endif
 
+    /* Basic parsing */
     err |= check_parse_entry("Xft.dpi: 96", "96", 2, "Xft", "dpi");
     err |= check_parse_entry("*color0: #abcdef", "#abcdef", 2, "*", "color0");
+    err |= check_parse_entry("*Menu?colors.blue: 0", "0", 5, "*", "Menu", "?", "colors", "blue");
+
+    /* Whitespace */
     err |= check_parse_entry("*Menu.color10:\t#000000", "#000000", 3, "*", "Menu", "color10");
     err |= check_parse_entry("?Foo.Bar?Baz?la:\t\t \tA\tB C:D ", "A\tB C:D ", 7,
             "?", "Foo", "Bar", "?", "Baz", "?", "la");
+
+    /* Subsequent '*' */
     err |= check_parse_entry("Foo**baz: x", "x", 3, "Foo", "*", "baz");
+
+    /* Wildcards within the value. */
     err |= check_parse_entry("Foo: x.y", "x.y", 1, "Foo");
     err |= check_parse_entry("Foo: x?y", "x?y", 1, "Foo");
     err |= check_parse_entry("Foo: x*y", "x*y", 1, "Foo");
 
+    /* Wildcards as last component */
     err |= check_parse_entry_error("Foo?: x", -1);
     err |= check_parse_entry_error("Foo*: x", -1);
+
+    /* No / invalid resource */
     err |= check_parse_entry_error(": x", -1);
     err |= check_parse_entry_error("Foo", -1);
     err |= check_parse_entry_error("Foo? Bar", -1);
