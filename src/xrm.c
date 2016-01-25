@@ -75,6 +75,9 @@ void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
 int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
                          const char **res_type, xcb_xrm_resource_t **_resource) {
     xcb_xrm_resource_t *resource;
+    xcb_xrm_entry_t *entry_name = NULL;
+    xcb_xrm_entry_t *entry_class = NULL;
+    int result = 0;
 
     if (ctx->resources == NULL || TAILQ_EMPTY(&(ctx->entries))) {
         *res_type = NULL;
@@ -86,12 +89,35 @@ int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const cha
     *_resource = scalloc(1, sizeof(struct xcb_xrm_resource_t));
     resource = *_resource;
 
+    if (xcb_xrm_parse_entry(res_name, &entry_name, true) < 0) {
+        result = -1;
+        goto done;
+    }
+
+    /* For the resource class input, we allow NULL and empty string as
+     * placeholders for not specifying this string. Technically this is
+     * violating the spec, but it seems to be widely used. */
+    if (res_class != NULL && strlen(res_class) > 0 &&
+            xcb_xrm_parse_entry(res_class, &entry_class, true) < 0) {
+        result = -1;
+        goto done;
+    }
+
     // TODO XXX Implement matching algorithm
     // Note: Check that parsing res_* worked
     //  Note: last component (resource name) is case insensitive, others aren't.
     resource->size = 0;
     resource->value = sstrdup("96");
-    return 0;
+
+done:
+    if (entry_name != NULL) {
+        xcb_xrm_entry_free(entry_name);
+    }
+    if (entry_class != NULL) {
+        xcb_xrm_entry_free(entry_class);
+    }
+
+    return result;
 }
 
 void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
