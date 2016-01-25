@@ -141,6 +141,9 @@ static int check_get_resource(xcb_xrm_context_t *ctx, const char *database,
     const char *type;
     xcb_xrm_resource_t *resource;
 
+    fprintf(stderr, "== Assert that getting resource <%s> / <%s> returns <%s>\n",
+            res_name, res_class, value);
+
     xcb_xrm_parse_database_from_string(ctx, database);
     if (xcb_xrm_get_resource(ctx, res_name, res_class, &type, &resource) < 0) {
         fprintf(stderr, "xcb_xrm_get_resource() < 0\n");
