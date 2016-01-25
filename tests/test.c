@@ -41,7 +41,7 @@
 
 #define SKIP 77
 
-static bool check_parse_entry_no_wildcards;
+static bool check_parse_entry_resource_only;
 
 static bool check_strings(const char *expected, const char *actual,
         const char *format, ...) ATTRIBUTE_PRINTF(3, 4);
@@ -85,15 +85,19 @@ static int check_parse_entry(const char *str, const char *value, const int count
 
     fprintf(stderr, "== Assert that parsing \"%s\" is successful\n", str);
 
-    if (xcb_xrm_parse_entry(str, &entry, check_parse_entry_no_wildcards) < 0) {
+    if (xcb_xrm_parse_entry(str, &entry, check_parse_entry_resource_only) < 0) {
         fprintf(stderr, "xcb_xrm_parse_entry() < 0\n");
         return true;
     }
 
     bool err = false;
 
-    /* Assert the entry's value. */
-    err |= check_strings(value, entry->value, "Wrong entry value: <%s> / <%s>\n", value, entry->value);
+    if (!check_parse_entry_resource_only) {
+        /* Assert the entry's value. */
+        err |= check_strings(value, entry->value, "Wrong entry value: <%s> / <%s>\n", value, entry->value);
+    } else {
+        err |= check_strings(NULL, entry->value, "Expected no value, but found <%s>\n", entry->value);
+    }
 
     /* Assert the number of components. */
     TAILQ_FOREACH(component, &(entry->components), components) {
@@ -130,7 +134,7 @@ static int check_parse_entry_error(const char *str, const int result) {
 
     fprintf(stderr, "== Assert that parsing \"%s\" returns <%d>\n", str, result);
 
-    actual = xcb_xrm_parse_entry(str, &entry, check_parse_entry_no_wildcards);
+    actual = xcb_xrm_parse_entry(str, &entry, check_parse_entry_resource_only);
     xcb_xrm_entry_free(entry);
     return check_ints(result, actual, "Wrong result code: <%d> / <%d>\n", result, actual);
 }
@@ -160,7 +164,7 @@ static int check_get_resource(xcb_xrm_context_t *ctx, const char *database,
 static int test_entry_parser(void) {
     bool err = false;
 
-    check_parse_entry_no_wildcards = false;
+    check_parse_entry_resource_only = false;
 
     /* Basic parsing */
     err |= check_parse_entry("Xft.dpi: 96", "96", 2, "Xft", "dpi");
@@ -189,18 +193,15 @@ static int test_entry_parser(void) {
     err |= check_parse_entry_error("Foo", -1);
     err |= check_parse_entry_error("Foo? Bar", -1);
 
-    /* Test for disallowing wildcards. */
-    check_parse_entry_no_wildcards = true;
+    /* Test for parsing a resource used for queries. */
+    check_parse_entry_resource_only = true;
 
-    err |= check_parse_entry("Foo.baz: on", "on", 2, "Foo", "baz");
-    err |= check_parse_entry("Foo.baz: *", "*", 2, "Foo", "baz");
-    err |= check_parse_entry("Foo.baz: ?", "?", 2, "Foo", "baz");
-    err |= check_parse_entry("Foo.baz: on?off", "on?off", 2, "Foo", "baz");
-    err |= check_parse_entry("Foo.baz: on*off", "on*off", 2, "Foo", "baz");
-    err |= check_parse_entry_error("Foo*baz: on", -1);
-    err |= check_parse_entry_error("Foo?baz: on", -1);
-    err |= check_parse_entry_error("*baz: on", -1);
-    err |= check_parse_entry_error("?baz: on", -1);
+    err |= check_parse_entry("Foo.baz", NULL, 2, "Foo", "baz");
+    err |= check_parse_entry_error("Foo.baz: on", -1);
+    err |= check_parse_entry_error("Foo*baz", -1);
+    err |= check_parse_entry_error("Foo?baz", -1);
+    err |= check_parse_entry_error("*baz", -1);
+    err |= check_parse_entry_error("?baz", -1);
 
     return err;
 }

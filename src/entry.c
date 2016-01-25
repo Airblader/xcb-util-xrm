@@ -102,12 +102,12 @@ static void xcb_xrm_append_component(xcb_xrm_entry_t *entry, xcb_xrm_component_t
  * @param str The resource string.
  * @param entry A return struct that will contain the parsed resource. The
  * memory will be allocated dynamically, so it must be freed.
- * @param no_wildcards If true, only components of type CT_NORMAL are allowed.
+ * @param resource_only If true, only components of type CT_NORMAL are allowed.
  *
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wildcards) {
+int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool resource_only) {
     char *str;
     char *walk;
     xcb_xrm_entry_t *entry = NULL;
@@ -145,7 +145,7 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
                     goto process_normally;
                 }
 
-                if (no_wildcards) {
+                if (resource_only) {
                     goto done_error;
                 }
 
@@ -157,7 +157,7 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
                     goto process_normally;
                 }
 
-                if (no_wildcards) {
+                if (resource_only) {
                     goto done_error;
                 }
 
@@ -179,6 +179,10 @@ int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool no_wild
 
                 goto process_normally;
             case ':':
+                if (resource_only) {
+                    goto done_error;
+                }
+
                 // TODO XXX We should also handle state.chunk == CS_INITIAL
                 // here, even though it's an exotic case.
                 if (state.chunk == CS_COMPONENTS) {
@@ -210,9 +214,13 @@ process_normally:
     if (state.chunk == CS_VALUE) {
         *value_pos = '\0';
         entry->value = sstrdup(value_buf);
-    } else {
+    } else if (!resource_only) {
         /* Return error if there was no value for this entry. */
         goto done_error;
+    } else {
+        /* Since in the case of resource_only we never went into CS_VALUE, we
+         * need to finalize the last component. */
+        xcb_xrm_finalize_component(entry, &state);
     }
 
     /* Assert that this entry actually had a resource component. */

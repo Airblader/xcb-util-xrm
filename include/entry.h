@@ -90,12 +90,13 @@ typedef struct xcb_xrm_entry_t {
  * @param str The resource string.
  * @param entry A return struct that will contain the parsed resource. The
  * memory will be allocated dynamically, so it must be freed.
- * @param no_wildcards If true, only components of type CT_NORMAL are allowed.
+ * @param resource_only If true, no wildcards are allowed and only a resource
+ * name is parsed.
  *
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_parse_entry(const char *str, xcb_xrm_entry_t **entry, bool no_wildcards);
+int xcb_xrm_parse_entry(const char *str, xcb_xrm_entry_t **entry, bool resource_only);
 
 /**
  * Frees the given entry.

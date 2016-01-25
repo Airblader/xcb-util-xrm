@@ -87,6 +87,7 @@ int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const cha
     resource = *_resource;
 
     // TODO XXX Implement matching algorithm
+    // Note: Check that parsing res_* worked
     //  Note: last component (resource name) is case insensitive, others aren't.
     resource->size = 0;
     resource->value = sstrdup("96");
