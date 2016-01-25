@@ -107,7 +107,7 @@ static void xcb_xrm_append_component(xcb_xrm_entry_t *entry, xcb_xrm_component_t
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_parse_entry(const char *_str, xcb_xrm_entry_t **_entry, bool resource_only) {
+int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resource_only) {
     char *str;
     char *walk;
     xcb_xrm_entry_t *entry = NULL;

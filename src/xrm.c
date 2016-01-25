@@ -72,7 +72,7 @@ void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
     FREE(ctx);
 }
 
-int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
+int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
                          const char **res_type, xcb_xrm_resource_t **_resource) {
     xcb_xrm_resource_t *resource;
     xcb_xrm_entry_t *entry_name = NULL;
@@ -89,7 +89,7 @@ int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const cha
     *_resource = scalloc(1, sizeof(struct xcb_xrm_resource_t));
     resource = *_resource;
 
-    if (xcb_xrm_parse_entry(res_name, &entry_name, true) < 0) {
+    if (xcb_xrm_entry_parse(res_name, &entry_name, true) < 0) {
         result = -1;
         goto done;
     }
@@ -98,7 +98,7 @@ int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const cha
      * placeholders for not specifying this string. Technically this is
      * violating the spec, but it seems to be widely used. */
     if (res_class != NULL && strlen(res_class) > 0 &&
-            xcb_xrm_parse_entry(res_class, &entry_class, true) < 0) {
+            xcb_xrm_entry_parse(res_class, &entry_class, true) < 0) {
         result = -1;
         goto done;
     }
@@ -133,7 +133,7 @@ void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_parse_database_from_string(xcb_xrm_context_t *ctx, const char *str) {
+int xcb_xrm_database_load_from_string(xcb_xrm_context_t *ctx, const char *str) {
     char *copy = sstrdup(str);
 
     xcb_xrm_database_free(ctx);
@@ -141,7 +141,7 @@ int xcb_xrm_parse_database_from_string(xcb_xrm_context_t *ctx, const char *str) 
 
     for (char *line = strtok(copy, "\n"); line != NULL; line = strtok(NULL, "\n")) {
         xcb_xrm_entry_t *entry;
-        if (xcb_xrm_parse_entry(line, &entry, false) == 0 && entry != NULL) {
+        if (xcb_xrm_entry_parse(line, &entry, false) == 0 && entry != NULL) {
             TAILQ_INSERT_TAIL(&(ctx->entries), entry, entries);
         }
     }
@@ -159,7 +159,7 @@ int xcb_xrm_parse_database_from_string(xcb_xrm_context_t *ctx, const char *str) 
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
+int xcb_xrm_database_load(xcb_xrm_context_t *ctx) {
     xcb_get_property_cookie_t rm_cookie;
     xcb_get_property_reply_t *rm_reply;
     xcb_generic_error_t *err;
@@ -191,5 +191,5 @@ int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx) {
     FREE(rm_reply);
 
     /* Parse the resource string. */
-    return xcb_xrm_parse_database_from_string(ctx, resources);
+    return xcb_xrm_database_load_from_string(ctx, resources);
 }

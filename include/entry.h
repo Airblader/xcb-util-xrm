@@ -61,7 +61,7 @@ typedef struct xcb_xrm_component_t {
     TAILQ_ENTRY(xcb_xrm_component_t) components;
 } xcb_xrm_component_t;
 
-/** Used in xcb_xrm_parse_entry. */
+/** Used in xcb_xrm_entry_parse. */
 typedef struct xcb_xrm_entry_parser_state_t {
     xcb_xrm_entry_parser_chunk_status_t chunk;
     char buffer[4096];
@@ -96,7 +96,7 @@ typedef struct xcb_xrm_entry_t {
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_parse_entry(const char *str, xcb_xrm_entry_t **entry, bool resource_only);
+int xcb_xrm_entry_parse(const char *str, xcb_xrm_entry_t **entry, bool resource_only);
 
 /**
  * Frees the given entry.

@@ -85,8 +85,8 @@ static int check_parse_entry(const char *str, const char *value, const int count
 
     fprintf(stderr, "== Assert that parsing \"%s\" is successful\n", str);
 
-    if (xcb_xrm_parse_entry(str, &entry, check_parse_entry_resource_only) < 0) {
-        fprintf(stderr, "xcb_xrm_parse_entry() < 0\n");
+    if (xcb_xrm_entry_parse(str, &entry, check_parse_entry_resource_only) < 0) {
+        fprintf(stderr, "xcb_xrm_entry_parse() < 0\n");
         return true;
     }
 
@@ -134,7 +134,7 @@ static int check_parse_entry_error(const char *str, const int result) {
 
     fprintf(stderr, "== Assert that parsing \"%s\" returns <%d>\n", str, result);
 
-    actual = xcb_xrm_parse_entry(str, &entry, check_parse_entry_resource_only);
+    actual = xcb_xrm_entry_parse(str, &entry, check_parse_entry_resource_only);
     xcb_xrm_entry_free(entry);
     return check_ints(result, actual, "Wrong result code: <%d> / <%d>\n", result, actual);
 }
@@ -148,9 +148,9 @@ static int check_get_resource(xcb_xrm_context_t *ctx, const char *database,
     fprintf(stderr, "== Assert that getting resource <%s> / <%s> returns <%s>\n",
             res_name, res_class, value);
 
-    xcb_xrm_parse_database_from_string(ctx, database);
-    if (xcb_xrm_get_resource(ctx, res_name, res_class, &type, &resource) < 0) {
-        fprintf(stderr, "xcb_xrm_get_resource() < 0\n");
+    xcb_xrm_database_load_from_string(ctx, database);
+    if (xcb_xrm_resource_get(ctx, res_name, res_class, &type, &resource) < 0) {
+        fprintf(stderr, "xcb_xrm_resource_get() < 0\n");
         return true;
     }
 

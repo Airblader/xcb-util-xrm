@@ -70,13 +70,13 @@ void xcb_xrm_context_free(xcb_xrm_context_t *ctx);
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_initialize_database(xcb_xrm_context_t *ctx);
+int xcb_xrm_database_load(xcb_xrm_context_t *ctx);
 
 /**
  * TODO Documentation
  *
  */
-int xcb_xrm_get_resource(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
+int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
                          const char **res_type, xcb_xrm_resource_t **resource);
 
 /**
