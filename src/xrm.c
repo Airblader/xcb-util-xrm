@@ -75,8 +75,11 @@ void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
 int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
                          const char **res_type, xcb_xrm_resource_t **_resource) {
     xcb_xrm_resource_t *resource;
+    xcb_xrm_entry_t *curr;
     xcb_xrm_entry_t *entry_name = NULL;
     xcb_xrm_entry_t *entry_class = NULL;
+    xcb_xrm_hay_entry_t *current_entry, *next_entry;
+    xcb_xrm_component_t *current_name;
     int result = 0;
 
     if (ctx->resources == NULL || TAILQ_EMPTY(&(ctx->entries))) {
@@ -103,11 +106,74 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
         goto done;
     }
 
-    // TODO XXX Implement matching algorithm
-    // Note: Check that parsing res_* worked
-    //  Note: last component (resource name) is case insensitive, others aren't.
-    resource->size = 0;
-    resource->value = sstrdup("96");
+    /* First, we set up a wrapper list of our database so we can store some
+     * additional information for each entry and also filter entries out. */
+    TAILQ_HEAD(entries_head, xcb_xrm_hay_entry_t) entries_head = TAILQ_HEAD_INITIALIZER(entries_head);
+    TAILQ_FOREACH(curr, &(ctx->entries), entries) {
+        xcb_xrm_hay_entry_t *new = scalloc(1, sizeof(xcb_xrm_hay_entry_t));
+        new->entry = curr;
+        new->current_component = TAILQ_FIRST(&(curr->components));
+
+        TAILQ_INSERT_TAIL(&entries_head, new, entries);
+    }
+
+    // TODO XXX This will currently eat our actual database and fail with the second request. Fix this.
+    // TODO XXX We currently ignore res_class. Implement handling it.
+    // TODO XXX The last component must be treated case insensitive.
+    // TODO XXX This currently doesn't implement precedence at all.
+    // https://tronche.com/gui/x/xlib/resource-manager/matching-rules.html
+    current_name = TAILQ_FIRST(&(entry_name->components));
+    while (current_name != NULL) {
+        current_entry = TAILQ_FIRST(&entries_head);
+        while (current_entry != NULL) {
+            next_entry = NULL;
+
+            /* If the queried resource is longer than this entry, eliminate it. */
+            if (current_entry->current_component == NULL) {
+                goto eliminate_entry;
+            }
+
+            if (current_entry->current_component->type == CT_NORMAL) {
+                /* We are comparing against a non-wildcard component, so just compare names. */
+                if (strcmp(current_entry->current_component->name, current_name->name) == 0) {
+                    /* The name matches, so we don't filter this entry out. */
+                    goto keep_entry;
+                } else {
+                    /* No match. Better luck next time! */
+                    goto eliminate_entry;
+                }
+            } else {
+                // TODO XXX Handle wildcards
+            }
+
+eliminate_entry:
+            next_entry = TAILQ_NEXT(current_entry, entries);
+            TAILQ_REMOVE(&entries_head, current_entry, entries);
+            FREE(current_entry);
+keep_entry:
+            if (next_entry == NULL && current_entry != NULL) {
+                next_entry = TAILQ_NEXT(current_entry, entries);
+            }
+
+            if (current_entry != NULL) {
+                current_entry->current_component = TAILQ_NEXT(current_entry->current_component, components);
+            }
+
+            current_entry = next_entry;
+        }
+
+        current_name = TAILQ_NEXT(current_name, components);
+    }
+
+    // TODO XXX Implement precedence here
+    resource->value = sstrdup(TAILQ_FIRST(&entries_head)->entry->value);
+    resource->size = strlen(resource->value);
+
+    while (!TAILQ_EMPTY(&entries_head)) {
+        current_entry = TAILQ_FIRST(&entries_head);
+        TAILQ_REMOVE(&entries_head, current_entry, entries);
+        FREE(current_entry);
+    }
 
 done:
     if (entry_name != NULL) {
@@ -139,6 +205,7 @@ int xcb_xrm_database_load_from_string(xcb_xrm_context_t *ctx, const char *str) {
     xcb_xrm_database_free(ctx);
     ctx->resources = sstrdup(str);
 
+    // TODO XXX Don't split on "\\n", which is an escaped newline.
     for (char *line = strtok(copy, "\n"); line != NULL; line = strtok(NULL, "\n")) {
         xcb_xrm_entry_t *entry;
         if (xcb_xrm_entry_parse(line, &entry, false) == 0 && entry != NULL) {

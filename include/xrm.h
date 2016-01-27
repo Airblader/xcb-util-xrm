@@ -52,6 +52,21 @@ struct xcb_xrm_resource_t {
 };
 
 /**
+ * Wraps xcb_xrm_entry_t so we can store some additional data when going
+ * through the list and filter out entries.
+ *
+ */
+typedef struct xcb_xrm_hay_entry_t {
+    /* The entry we are wrapping. */
+    xcb_xrm_entry_t *entry;
+
+    /* The component we are currently looking at. */
+    xcb_xrm_component_t *current_component;
+
+    TAILQ_ENTRY(xcb_xrm_hay_entry_t) entries;
+} xcb_xrm_hay_entry_t;
+
+/**
  * Interprets the string as a resource list, parses it and stores it in the database of the context.
  *
  * @param ctx Context.
