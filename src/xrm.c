@@ -143,6 +143,9 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
                     /* No match. Better luck next time! */
                     goto eliminate_entry;
                 }
+            } else if (cur_db_entry->current_component->type == CT_WILDCARD_SINGLE) {
+                /* We'll happily accept the placeholder and move on. */
+                goto keep_entry;
             } else {
                 // TODO XXX Handle wildcards
             }

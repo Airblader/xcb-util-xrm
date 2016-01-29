@@ -251,6 +251,10 @@ static int test_get_resource(void) {
     err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.dpi", "", "96");
     err |= check_get_resource(ctx, "Foo.baz: on\nXft.dpi: 96\nNothing?to.see: off", "Xft.dpi", "", "96");
 
+    /* Basic '?' tests */
+    err |= check_get_resource(ctx, "?dpi: 96", "Xft.dpi", "", "96");
+    err |= check_get_resource(ctx, "A?C.d: 96", "A.B.C.d", "", "96");
+
     // TODO XXX Tests that need to be written and implemented:
     //   - The example from the docs
     //   - Individual tests for precedence rules
