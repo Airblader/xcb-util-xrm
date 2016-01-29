@@ -80,6 +80,7 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
     xcb_xrm_entry_t *entry_class = NULL;
     xcb_xrm_hay_entry_t *current_entry, *next_entry;
     xcb_xrm_component_t *current_name;
+    TAILQ_HEAD(entries_head, xcb_xrm_hay_entry_t) entries_head = TAILQ_HEAD_INITIALIZER(entries_head);
     int result = 0;
 
     if (ctx->resources == NULL || TAILQ_EMPTY(&(ctx->entries))) {
@@ -108,7 +109,6 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
 
     /* First, we set up a wrapper list of our database so we can store some
      * additional information for each entry and also filter entries out. */
-    TAILQ_HEAD(entries_head, xcb_xrm_hay_entry_t) entries_head = TAILQ_HEAD_INITIALIZER(entries_head);
     TAILQ_FOREACH(curr, &(ctx->entries), entries) {
         xcb_xrm_hay_entry_t *new = scalloc(1, sizeof(xcb_xrm_hay_entry_t));
         new->entry = curr;
@@ -165,17 +165,23 @@ keep_entry:
         current_name = TAILQ_NEXT(current_name, components);
     }
 
+    /* If we filtered everything out, there's no result. */
+    if (TAILQ_EMPTY(&entries_head)) {
+        result = -1;
+        goto done;
+    }
+
     // TODO XXX Implement precedence here
     resource->value = sstrdup(TAILQ_FIRST(&entries_head)->entry->value);
     resource->size = strlen(resource->value);
 
+done:
     while (!TAILQ_EMPTY(&entries_head)) {
         current_entry = TAILQ_FIRST(&entries_head);
         TAILQ_REMOVE(&entries_head, current_entry, entries);
         FREE(current_entry);
     }
 
-done:
     if (entry_name != NULL) {
         xcb_xrm_entry_free(entry_name);
     }
