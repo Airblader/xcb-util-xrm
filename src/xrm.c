@@ -78,8 +78,8 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
     xcb_xrm_entry_t *curr;
     xcb_xrm_entry_t *entry_name = NULL;
     xcb_xrm_entry_t *entry_class = NULL;
-    xcb_xrm_hay_entry_t *current_entry, *next_entry;
-    xcb_xrm_component_t *current_name;
+    xcb_xrm_hay_entry_t *cur_db_entry, *next_db_entry;
+    xcb_xrm_component_t *cur_res_name_component;
     TAILQ_HEAD(entries_head, xcb_xrm_hay_entry_t) entries_head = TAILQ_HEAD_INITIALIZER(entries_head);
     int result = 0;
 
@@ -122,20 +122,21 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
     // TODO XXX The last component must be treated case insensitive.
     // TODO XXX This currently doesn't implement precedence at all.
     // https://tronche.com/gui/x/xlib/resource-manager/matching-rules.html
-    current_name = TAILQ_FIRST(&(entry_name->components));
-    while (current_name != NULL) {
-        current_entry = TAILQ_FIRST(&entries_head);
-        while (current_entry != NULL) {
-            next_entry = NULL;
+    cur_res_name_component = TAILQ_FIRST(&(entry_name->components));
+    while (cur_res_name_component != NULL) {
+        cur_db_entry = TAILQ_FIRST(&entries_head);
+
+        while (cur_db_entry != NULL) {
+            next_db_entry = NULL;
 
             /* If the queried resource is longer than this entry, eliminate it. */
-            if (current_entry->current_component == NULL) {
+            if (cur_db_entry->current_component == NULL) {
                 goto eliminate_entry;
             }
 
-            if (current_entry->current_component->type == CT_NORMAL) {
+            if (cur_db_entry->current_component->type == CT_NORMAL) {
                 /* We are comparing against a non-wildcard component, so just compare names. */
-                if (strcmp(current_entry->current_component->name, current_name->name) == 0) {
+                if (strcmp(cur_db_entry->current_component->name, cur_res_name_component->name) == 0) {
                     /* The name matches, so we don't filter this entry out. */
                     goto keep_entry;
                 } else {
@@ -147,22 +148,22 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
             }
 
 eliminate_entry:
-            next_entry = TAILQ_NEXT(current_entry, entries);
-            TAILQ_REMOVE(&entries_head, current_entry, entries);
-            FREE(current_entry);
+            next_db_entry = TAILQ_NEXT(cur_db_entry, entries);
+            TAILQ_REMOVE(&entries_head, cur_db_entry, entries);
+            FREE(cur_db_entry);
 keep_entry:
-            if (next_entry == NULL && current_entry != NULL) {
-                next_entry = TAILQ_NEXT(current_entry, entries);
+            if (next_db_entry == NULL && cur_db_entry != NULL) {
+                next_db_entry = TAILQ_NEXT(cur_db_entry, entries);
             }
 
-            if (current_entry != NULL) {
-                current_entry->current_component = TAILQ_NEXT(current_entry->current_component, components);
+            if (cur_db_entry != NULL) {
+                cur_db_entry->current_component = TAILQ_NEXT(cur_db_entry->current_component, components);
             }
 
-            current_entry = next_entry;
+            cur_db_entry = next_db_entry;
         }
 
-        current_name = TAILQ_NEXT(current_name, components);
+        cur_res_name_component = TAILQ_NEXT(cur_res_name_component, components);
     }
 
     /* If we filtered everything out, there's no result. */
@@ -177,9 +178,9 @@ keep_entry:
 
 done:
     while (!TAILQ_EMPTY(&entries_head)) {
-        current_entry = TAILQ_FIRST(&entries_head);
-        TAILQ_REMOVE(&entries_head, current_entry, entries);
-        FREE(current_entry);
+        cur_db_entry = TAILQ_FIRST(&entries_head);
+        TAILQ_REMOVE(&entries_head, cur_db_entry, entries);
+        FREE(cur_db_entry);
     }
 
     if (entry_name != NULL) {
