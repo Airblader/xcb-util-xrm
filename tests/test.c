@@ -150,14 +150,22 @@ static int check_get_resource(xcb_xrm_context_t *ctx, const char *database,
 
     xcb_xrm_database_load_from_string(ctx, database);
     if (xcb_xrm_resource_get(ctx, res_name, res_class, &type, &resource) < 0) {
-        fprintf(stderr, "xcb_xrm_resource_get() < 0\n");
-        return true;
+        if (value != NULL) {
+            fprintf(stderr, "xcb_xrm_resource_get() < 0\n");
+            err = true;
+        }
+
+        goto done_get_resource;
     }
 
     err |= check_strings("String", type, "Expected <String>, but got <%s>\n", type);
     err |= check_strings(value, resource->value, "Expected <%s>, but got <%s>\n", value, resource->value);
 
-    xcb_xrm_resource_free(resource);
+done_get_resource:
+    if (resource != NULL) {
+        xcb_xrm_resource_free(resource);
+    }
+
     return err;
 }
 
@@ -230,6 +238,8 @@ static int test_get_resource(void) {
         return true;
     }
 
+    err |= check_get_resource(ctx, "", "Xft.dpi", "", NULL);
+    err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.display", "", NULL);
     err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.dpi", "", "96");
     err |= check_get_resource(ctx, "Foo.baz: on\nXft.dpi: 96\nNothing?to.see: off", "Xft.dpi", "", "96");
 
