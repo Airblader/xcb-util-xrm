@@ -250,10 +250,31 @@ static int test_get_resource(void) {
     err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.display", "", NULL);
     err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.dpi", "", "96");
     err |= check_get_resource(ctx, "Foo.baz: on\nXft.dpi: 96\nNothing?to.see: off", "Xft.dpi", "", "96");
+    err |= check_get_resource(ctx, "Xft.dpi.trailingnonsense: 96", "Xft.dpi", "", NULL);
+    err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.dpi.trailingnonsense", "", NULL);
 
     /* Basic '?' tests */
     err |= check_get_resource(ctx, "?dpi: 96", "Xft.dpi", "", "96");
     err |= check_get_resource(ctx, "A?C.d: 96", "A.B.C.d", "", "96");
+    err |= check_get_resource(ctx, "A??d: 96", "A.B.C.d", "", "96");
+    err |= check_get_resource(ctx, "A?d: 96", "A.B.C.d", "", NULL);
+
+    /* Basic '*' tests */
+    err |= check_get_resource(ctx, "*dpi: 96", "Xft.dpi", "", "96");
+    err |= check_get_resource(ctx, "Xft*dpi: 96", "Xft.dpi", "", "96");
+    err |= check_get_resource(ctx, "Xft**dpi: 96", "Xft.dpi", "", "96");
+    err |= check_get_resource(ctx, "Xft**dpi: 96", "Xft.bla.dpi", "", "96");
+    err |= check_get_resource(ctx, "Xft*?dpi: 96", "Xft.dpi", "", NULL);
+//    err |= check_get_resource(ctx, "Xft*?dpi: 96", "Xft.foo.dpi", "", "96");
+
+    /* Basic precedence tests*/
+    //   - Individual tests for precedence rules
+    err |= check_get_resource(ctx, "Xft*dpi: 96\nXft.foo.dpi: 97", "Xft.foo.dpi", "", "97");
+    err |= check_get_resource(ctx, "Xft.foo.dpi: 96\nXft*dpi: 97", "Xft.foo.dpi", "", "96");
+    err |= check_get_resource(ctx, "Xft?dpi: 96\nXft*dpi: 97", "Xft.foo.dpi", "", "96");
+    err |= check_get_resource(ctx, "Xft*dpi: 96\nXft?dpi: 97", "Xft.foo.dpi", "", "97");
+    err |= check_get_resource(ctx, "Xft.foo.dpi: 96\nXft?dpi: 97", "Xft.foo.dpi", "", "96");
+
 
     // TODO XXX Tests that need to be written and implemented:
     //   - The example from the docs
@@ -261,7 +282,7 @@ static int test_get_resource(void) {
     //   - Different length for res_name / res_class in all combinations.
 
     // TODO XXX Tests
-    //err |= check_get_resource("*theme: fun", "Cursor.theme", "", "fun");
+//    err |= check_get_resource("*theme: fun", "Cursor.theme", "", "fun");
 
     xcb_xrm_context_free(ctx);
     xcb_disconnect(conn);

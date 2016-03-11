@@ -44,11 +44,11 @@ typedef enum {
 /** Specifies the type of a component. */
 typedef enum {
     /* A "normal" component, i.e., a name/class is given. */
-    CT_NORMAL,
+    CT_NORMAL = 0,
     /* A single wildcard component ("?"). */
-    CT_WILDCARD_SINGLE,
+    CT_WILDCARD_SINGLE = 1,
     /* A multi wildcard component ("*"). */
-    CT_WILDCARD_MULTI
+    CT_WILDCARD_MULTI = 2
 } xcb_xrm_component_type_t;
 
 /** One component of a resource, either in the name or class. */
