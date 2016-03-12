@@ -26,27 +26,36 @@
  * authorization from the authors.
  *
  */
-#ifndef __UTIL_H__
-#define __UTIL_H__
+#ifndef __MATCH_H__
+#define __MATCH_H__
 
-#define FREE(p)          \
-    do {                 \
-        if (p != NULL) { \
-            free(p);     \
-            p = NULL;    \
-        }                \
-    } while (0)
+#include "xrm.h"
+#include "entry.h"
 
-#undef MAX
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#undef MIN
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
+typedef enum xcb_xrm_match_type_t {
+    MT_NONE = 1 << 0,
 
-#define SUCCESS 0
-#define FAILURE 1
+    MT_CLASS = 1 << 1,
+    MT_NAME = 1 << 2,
 
-char *sstrdup(const char *str);
+    MT_EXACT = 1 << 3,
+    MT_SINGLE = 1 << 4,
+    MT_MULTI = 1 << 5
+} xcb_xrm_match_type_t;
 
-void *scalloc(size_t num, size_t size);
+typedef struct xcb_xrm_match_t {
+    /* Reference to the database entry this match refers to. */
+	xcb_xrm_entry_t *entry;
+    /* An array where the n-th element describes how the n-th element of the
+     * query strings was matched. */
+	int *matches;
+} xcb_xrm_match_t;
 
-#endif /* __UTIL_H__ */
+/**
+ * Finds the matching entry in the database given a full name / class query string.
+ *
+ */
+int xcb_xrm_match(xcb_xrm_context_t *ctx, xcb_xrm_entry_t *query_name, xcb_xrm_entry_t *query_class,
+        xcb_xrm_resource_t *resource);
+
+#endif /* __MATCH_H__ */

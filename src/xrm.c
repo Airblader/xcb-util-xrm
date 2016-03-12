@@ -36,25 +36,11 @@
 
 #include "xrm.h"
 #include "entry.h"
+#include "match.h"
 #include "util.h"
-
-
-typedef enum {
-	MT_EXACT = 0,
-	MT_SINGLE = 1,
-	MT_MULTI = 2
-} xcb_xrm_matchtype_t;
-
-typedef struct {
-	xcb_xrm_entry_t *db_match;
-	xcb_xrm_matchtype_t* matchtype;
-} xcb_xrm_match_result_t;
 
 /* Forward declarations */
 static void xcb_xrm_database_free(xcb_xrm_context_t *ctx);
-static void xcb_xrm_match_resources(xcb_xrm_entry_t *queried_entry, xcb_xrm_entry_t *db_entry, xcb_xrm_match_result_t *match_result);
-static xcb_xrm_entry_t* xcb_xrm_compare_matches(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second);
-
 
 int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_context_t **c) {
     xcb_xrm_context_t *ctx = NULL;
@@ -92,8 +78,6 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
     xcb_xrm_resource_t *resource;
     xcb_xrm_entry_t *query_name = NULL;
     xcb_xrm_entry_t *query_class = NULL;
-    xcb_xrm_entry_t *next_entry = NULL;
-    xcb_xrm_entry_t *best_matching_entry = NULL;
     int result = 0;
 
     if (ctx->resources == NULL || TAILQ_EMPTY(&(ctx->entries))) {
@@ -120,91 +104,11 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
         goto done;
     }
 
-
-    next_entry = TAILQ_FIRST(&(ctx->entries));
-    while (next_entry != NULL) {
-    	// TODO allocate memory for the matchtypes
-    	xcb_xrm_match_result_t *match_result = scalloc(1, sizeof(xcb_xrm_match_result_t));
-    	xcb_xrm_match_resources(next_entry, query_name, match_result);
-    	if (match_result->db_match != NULL) {
-    		if (best_matching_entry == NULL) {
-    			best_matching_entry = next_entry;
-    		}
-    		best_matching_entry = xcb_xrm_compare_matches(best_matching_entry, next_entry);
-    	}
-    	free(match_result);
-    	next_entry = TAILQ_NEXT(next_entry, entries);
-    }
-	if (best_matching_entry != NULL) {
-		resource->value = sstrdup(best_matching_entry->value);
-		resource->size = strlen(resource->value);
-	}
-
+    result = xcb_xrm_match(ctx, query_name, query_class, resource);
 done:
+    xcb_xrm_entry_free(query_name);
+    xcb_xrm_entry_free(query_class);
     return result;
-}
-
-static xcb_xrm_entry_t* xcb_xrm_compare_matches(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second) {
-
-	xcb_xrm_component_t *first_component = TAILQ_FIRST(&(first->components));
-	xcb_xrm_component_t *second_component = TAILQ_FIRST(&(second->components));
-
-	while (true) {
-		if (second_component == NULL) {
-			return second;
-		} else if (first_component == NULL) {
-			return first;
-		}
-		if (first_component->type < second_component->type) { return first;}
-		if (first_component->type > second_component->type) { return second;}
-
-		first_component = TAILQ_NEXT(first_component, components);
-		second_component = TAILQ_NEXT(second_component, components);
-	}
-	return first;
-}
-
-static void xcb_xrm_match_resources(xcb_xrm_entry_t *db_entry, xcb_xrm_entry_t *queried_entry, xcb_xrm_match_result_t *match_result) {
-
-	xcb_xrm_component_t *current_component_query = TAILQ_FIRST(&(queried_entry->components));
-	xcb_xrm_component_t *current_component_db = TAILQ_FIRST(&(db_entry->components));
-	xcb_xrm_component_t *next_comp_db = current_component_db;
-
-	while(true) {
-		if(current_component_query == NULL && current_component_db == NULL) {
-			match_result->db_match = db_entry;
-			return;
-		} else  if (current_component_query == NULL || current_component_db == NULL){
-			return;
-		}
-		switch (current_component_db->type) {
-			case CT_NORMAL:
-				if (strcmp(current_component_query->name, current_component_db->name) == 0) {
-					current_component_query = TAILQ_NEXT(current_component_query, components);
-					current_component_db = TAILQ_NEXT(current_component_db, components);
-				} else {
-					return;
-				}
-				break;
-			case CT_WILDCARD_SINGLE:
-				current_component_query = TAILQ_NEXT(current_component_query, components);
-				current_component_db = TAILQ_NEXT(current_component_db, components);
-				break;
-			case CT_WILDCARD_MULTI:
-				next_comp_db = TAILQ_NEXT(current_component_db, components);
-				// TODO: implement *?
-				if (next_comp_db->type != CT_NORMAL) {
-					return;
-				}
-				if (strcmp(current_component_query->name, next_comp_db->name) == 0) {
-					current_component_db = TAILQ_NEXT(current_component_db, components);
-				} else {
-					current_component_query = TAILQ_NEXT(current_component_query, components);
-				}
-				break;
-		}
-	}
-
 }
 
 void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {

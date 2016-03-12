@@ -22,7 +22,7 @@ xcbinclude_HEADERS = include/xcb_xrm.h
 
 AM_CFLAGS = $(CWARNFLAGS)
 
-libxcb_xrm_la_SOURCES = src/xrm.c src/entry.c src/util.c
+libxcb_xrm_la_SOURCES = src/xrm.c src/entry.c src/util.c src/match.c
 libxcb_xrm_la_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS)
 libxcb_xrm_la_LIBADD = $(XCB_LIBS)
 libxcb_xrm_la_LDFLAGS = -version-info 0:0:0 -no-undefined -export-symbols-regex '^xcb_xrm_'

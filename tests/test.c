@@ -238,15 +238,12 @@ static int test_get_resource(void) {
         return true;
     }
 
-    /* Some basic incomplete input tests. */
     err |= check_get_resource(ctx, "", "", "", NULL);
     err |= check_get_resource(ctx, "", NULL, "", NULL);
     err |= check_get_resource(ctx, "", "", NULL, NULL);
     err |= check_get_resource(ctx, "", NULL, NULL, NULL);
 
-    /* Verify that all entries being filtered out works. */
     err |= check_get_resource(ctx, "", "Xft.dpi", "", NULL);
-
     err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.display", "", NULL);
     err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.dpi", "", "96");
     err |= check_get_resource(ctx, "Foo.baz: on\nXft.dpi: 96\nNothing?to.see: off", "Xft.dpi", "", "96");
@@ -268,21 +265,31 @@ static int test_get_resource(void) {
 //    err |= check_get_resource(ctx, "Xft*?dpi: 96", "Xft.foo.dpi", "", "96");
 
     /* Basic precedence tests*/
-    //   - Individual tests for precedence rules
     err |= check_get_resource(ctx, "Xft*dpi: 96\nXft.foo.dpi: 97", "Xft.foo.dpi", "", "97");
     err |= check_get_resource(ctx, "Xft.foo.dpi: 96\nXft*dpi: 97", "Xft.foo.dpi", "", "96");
     err |= check_get_resource(ctx, "Xft?dpi: 96\nXft*dpi: 97", "Xft.foo.dpi", "", "96");
     err |= check_get_resource(ctx, "Xft*dpi: 96\nXft?dpi: 97", "Xft.foo.dpi", "", "97");
     err |= check_get_resource(ctx, "Xft.foo.dpi: 96\nXft?dpi: 97", "Xft.foo.dpi", "", "96");
 
+    /* Tests for using a class string as well. */
+    err |= check_get_resource(ctx, "A.b.C.d: 42", "A.notme.C.notme", "notme.b.notme.d", "42");
+    err |= check_get_resource(ctx, "A.b.c: 42", "A.B.C", "a.b.c", "42");
+    err |= check_get_resource(ctx, "A.B.C: 1\nA.b.c: 2", "A.B.C", "A.b.c", "1");
+    err |= check_get_resource(ctx, "A.b.c: 2\nA.B.C: 1", "A.B.C", "A.b.c", "1");
+    err |= check_get_resource(ctx, "A*c: 1\nA.b.c: 2", "X.Y.Z", "A.b.c", "2");
+    err |= check_get_resource(ctx, "A*c: 1\nA?c: 2", "X.Y.Z", "A.b.c", "2");
 
-    // TODO XXX Tests that need to be written and implemented:
-    //   - The example from the docs
-    //   - Individual tests for precedence rules
-    //   - Different length for res_name / res_class in all combinations.
-
-    // TODO XXX Tests
-//    err |= check_get_resource("*theme: fun", "Cursor.theme", "", "fun");
+    // Example from the specification:
+    // https://tronche.com/gui/x/xlib/resource-manager/matching-rules.html
+    err |= check_get_resource(ctx,
+            "xmh*Paned*activeForeground: red\n"
+            "*incorporate.Foreground: blue\n"
+            "xmh.toc*Command*activeForeground: green\n"
+            "xmh.toc*?.Foreground: white\n"
+            "xmh.toc*Command.activeForeground: black",
+            "xmh.toc.messagefunctions.incorporate.activeForeground",
+            "Xmh.Paned.Box.Command.Foreground",
+            "black");
 
     xcb_xrm_context_free(ctx);
     xcb_disconnect(conn);
