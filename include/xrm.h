@@ -46,11 +46,6 @@ struct xcb_xrm_context_t {
     TAILQ_HEAD(database_head, xcb_xrm_entry_t) entries;
 };
 
-struct xcb_xrm_resource_t {
-    unsigned int size;
-    char *value;
-};
-
 /**
  * Interprets the string as a resource list, parses it and stores it in the database of the context.
  *

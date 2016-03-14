@@ -47,7 +47,10 @@ typedef struct xcb_xrm_context_t xcb_xrm_context_t;
  * TODO Documentation
  *
  */
-typedef struct xcb_xrm_resource_t xcb_xrm_resource_t;
+typedef struct xcb_xrm_resource_t {
+    unsigned int size;
+    char *value;
+} xcb_xrm_resource_t;
 
 /**
  * TODO Documentation
