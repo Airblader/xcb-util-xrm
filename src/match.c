@@ -52,13 +52,7 @@ int xcb_xrm_match(xcb_xrm_context_t *ctx, xcb_xrm_entry_t *query_name, xcb_xrm_e
     xcb_xrm_entry_t *cur_entry = TAILQ_FIRST(&(ctx->entries));
 
     /* Let's figure out how many elements we need to store. */
-    int num = 0;
-    do {
-        xcb_xrm_component_t *component;
-        TAILQ_FOREACH(component, &(query_name->components), components) {
-            num++;
-        }
-    } while (0);
+    int num = xcb_xrm_entry_num_components(query_name);
 
     while (cur_entry != NULL) {
         xcb_xrm_match_t *cur_match = __match_new(num);

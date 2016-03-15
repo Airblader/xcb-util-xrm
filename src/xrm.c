@@ -104,6 +104,15 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
         goto done;
     }
 
+    /* We rely on name and class query strings to have the same number of
+     * components, so let's check that this is the case. The specification
+     * backs us up here. */
+    if (query_class != NULL &&
+            xcb_xrm_entry_num_components(query_name) != xcb_xrm_entry_num_components(query_class)) {
+        result = -1;
+        goto done;
+    }
+
     result = xcb_xrm_match(ctx, query_name, query_class, resource);
 done:
     xcb_xrm_entry_free(query_name);
