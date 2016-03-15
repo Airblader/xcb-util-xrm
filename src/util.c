@@ -33,6 +33,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <math.h>
 
 #include "util.h"
 
@@ -52,4 +53,38 @@ void *scalloc(size_t num, size_t size) {
     }
 
     return result;
+}
+
+char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,
+        xcb_atom_t type, size_t size) {
+    xcb_get_property_cookie_t cookie;
+    xcb_get_property_reply_t *reply;
+    xcb_generic_error_t *err;
+    int reply_length;
+    char *content;
+
+    cookie = xcb_get_property(conn, 0, window, atom, type, 0, size);
+    reply = xcb_get_property_reply(conn, cookie, &err);
+    if (err != NULL) {
+        FREE(err);
+        return NULL;
+    }
+
+    if (reply == NULL || (reply_length = xcb_get_property_value_length(reply)) == 0) {
+        return NULL;
+    }
+
+    if (reply->bytes_after > 0) {
+        size_t adjusted_size = size + ceil(reply->bytes_after / 4.0);
+        FREE(reply);
+        return xcb_util_get_property(conn, window, atom, type, adjusted_size);
+    }
+
+    if (asprintf(&content, "%.*s", reply_length, (char *)xcb_get_property_value(reply)) < 0) {
+        FREE(reply);
+        return NULL;
+    }
+
+    FREE(reply);
+    return content;
 }

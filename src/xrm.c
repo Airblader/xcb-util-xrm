@@ -148,7 +148,7 @@ int xcb_xrm_database_load_from_string(xcb_xrm_context_t *ctx, const char *str) {
     }
 
     FREE(copy);
-    return 0;
+    return SUCCESS;
 }
 
 /*
@@ -161,35 +161,8 @@ int xcb_xrm_database_load_from_string(xcb_xrm_context_t *ctx, const char *str) {
  *
  */
 int xcb_xrm_database_load(xcb_xrm_context_t *ctx) {
-    xcb_get_property_cookie_t rm_cookie;
-    xcb_get_property_reply_t *rm_reply;
-    xcb_generic_error_t *err;
-    int rm_length;
-    char *resources;
-
-    // TODO XXX Be smarter here and really get the entire string, no matter how long it is.
-    rm_cookie = xcb_get_property(ctx->conn, 0, ctx->screen->root, XCB_ATOM_RESOURCE_MANAGER,
-            XCB_ATOM_STRING, 0, 16 * 1024);
-
-    rm_reply = xcb_get_property_reply(ctx->conn, rm_cookie, &err);
-    if (err != NULL) {
-        FREE(err);
-        return -1;
-    }
-
-    if (rm_reply == NULL)
-        return -1;
-
-    if ((rm_length = xcb_get_property_value_length(rm_reply)) == 0) {
-        return 0;
-    }
-
-    if (asprintf(&resources, "%.*s", rm_length, (char *)xcb_get_property_value(rm_reply)) == -1) {
-        return -ENOMEM;
-    }
-
-    /* We don't need this anymore. */
-    FREE(rm_reply);
+    char *resources = xcb_util_get_property(ctx->conn, ctx->screen->root, XCB_ATOM_RESOURCE_MANAGER,
+            XCB_ATOM_STRING, 16 * 1024);
 
     /* Parse the resource string. */
     return xcb_xrm_database_load_from_string(ctx, resources);

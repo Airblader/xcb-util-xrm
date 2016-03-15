@@ -29,6 +29,8 @@
 #ifndef __UTIL_H__
 #define __UTIL_H__
 
+#include <xcb/xcb.h>
+
 #define FREE(p)          \
     do {                 \
         if (p != NULL) { \
@@ -48,5 +50,8 @@
 char *sstrdup(const char *str);
 
 void *scalloc(size_t num, size_t size);
+
+char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,
+        xcb_atom_t type, size_t size);
 
 #endif /* __UTIL_H__ */
