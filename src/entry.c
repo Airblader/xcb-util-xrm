@@ -245,6 +245,21 @@ done_error:
 }
 
 /*
+ * Returns the number of components of the given entry.
+ *
+ */
+int xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry) {
+    int result = 0;
+
+    xcb_xrm_component_t *current;
+    TAILQ_FOREACH(current, &(entry->components), components) {
+        result++;
+    }
+
+    return result;
+}
+
+/*
  * Frees the given entry.
  *
  * @param entry The entry to be freed.

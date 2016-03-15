@@ -243,6 +243,8 @@ static int test_get_resource(void) {
     err |= check_get_resource(ctx, "", "", NULL, NULL);
     err |= check_get_resource(ctx, "", NULL, NULL, NULL);
 
+    err |= check_get_resource(ctx, "Xft*dpi", "Xft.dpi", "Xft.toomuch.dpi", NULL);
+
     err |= check_get_resource(ctx, "", "Xft.dpi", "", NULL);
     err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.display", "", NULL);
     err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.dpi", "", "96");

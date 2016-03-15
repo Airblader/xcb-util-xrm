@@ -99,6 +99,12 @@ typedef struct xcb_xrm_entry_t {
 int xcb_xrm_entry_parse(const char *str, xcb_xrm_entry_t **entry, bool resource_only);
 
 /**
+ * Returns the number of components of the given entry.
+ *
+ */
+int xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry);
+
+/**
  * Frees the given entry.
  *
  * @param entry The entry to be freed.
