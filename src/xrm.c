@@ -163,6 +163,9 @@ int xcb_xrm_database_load_from_string(xcb_xrm_context_t *ctx, const char *str) {
 int xcb_xrm_database_load(xcb_xrm_context_t *ctx) {
     char *resources = xcb_util_get_property(ctx->conn, ctx->screen->root, XCB_ATOM_RESOURCE_MANAGER,
             XCB_ATOM_STRING, 16 * 1024);
+    if (resources == NULL) {
+        return -FAILURE;
+    }
 
     /* Parse the resource string. */
     return xcb_xrm_database_load_from_string(ctx, resources);
