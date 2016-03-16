@@ -73,6 +73,16 @@ void xcb_xrm_context_free(xcb_xrm_context_t *ctx);
 int xcb_xrm_database_from_resource_manager(xcb_xrm_context_t *ctx);
 
 /**
+ * Interprets the string as a resource list, parses it and stores it in the database of the context.
+ *
+ * @param ctx Context.
+ * @param str Resource string.
+ * @return 0 on success, a negative error code otherwise.
+ *
+ */
+int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *str);
+
+/**
  * TODO Documentation
  *
  */
