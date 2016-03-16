@@ -62,15 +62,15 @@ int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_co
 void xcb_xrm_context_free(xcb_xrm_context_t *ctx);
 
 /**
- * Initializes the database for the context by parsing the resource manager
- * property.
+ * Initializes the database for the context by parsing the RESOURCE_MANAGER
+ * property on the root window.
  *
  * @param ctx Context.
  *
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_database_load(xcb_xrm_context_t *ctx);
+int xcb_xrm_database_from_resource_manager(xcb_xrm_context_t *ctx);
 
 /**
  * TODO Documentation

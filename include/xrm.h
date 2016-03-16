@@ -59,6 +59,6 @@ struct xcb_xrm_resource_t {
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_database_load_from_string(xcb_xrm_context_t *ctx, const char *str);
+int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *str);
 
 #endif /* __XRM_H__ */

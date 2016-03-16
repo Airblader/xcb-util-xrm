@@ -173,7 +173,7 @@ void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_database_load_from_string(xcb_xrm_context_t *ctx, const char *str) {
+int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *str) {
     char *copy = sstrdup(str);
 
     xcb_xrm_database_free(ctx);
@@ -192,15 +192,15 @@ int xcb_xrm_database_load_from_string(xcb_xrm_context_t *ctx, const char *str) {
 }
 
 /*
- * Initializes the database for the context by parsing the resource manager
- * property.
+ * Initializes the database for the context by parsing the RESOURCE_MANAGER
+ * property on the root window.
  *
  * @param ctx Context.
  *
  * @return 0 on success, a negative error code otherwise.
  *
  */
-int xcb_xrm_database_load(xcb_xrm_context_t *ctx) {
+int xcb_xrm_database_from_resource_manager(xcb_xrm_context_t *ctx) {
     char *resources = xcb_util_get_property(ctx->conn, ctx->screen->root, XCB_ATOM_RESOURCE_MANAGER,
             XCB_ATOM_STRING, 16 * 1024);
     if (resources == NULL) {
@@ -208,5 +208,5 @@ int xcb_xrm_database_load(xcb_xrm_context_t *ctx) {
     }
 
     /* Parse the resource string. */
-    return xcb_xrm_database_load_from_string(ctx, resources);
+    return xcb_xrm_database_from_string(ctx, resources);
 }
