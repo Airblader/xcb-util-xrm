@@ -51,6 +51,8 @@ char *sstrdup(const char *str);
 
 void *scalloc(size_t num, size_t size);
 
+int str2int(int *out, char *input, int base);
+
 char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,
         xcb_atom_t type, size_t size);
 

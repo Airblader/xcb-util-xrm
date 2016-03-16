@@ -31,6 +31,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 
 #include <xcb/xcb.h>
 
@@ -120,7 +121,46 @@ done:
     return result;
 }
 
+/*
+ * TODO Documentation
+ *
+ */
+char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
+    assert(resource != NULL);
+    return resource->value;
+}
+
+/*
+ * TODO Documentation
+ *
+ */
+int xcb_xrm_resource_value_int(xcb_xrm_resource_t *resource) {
+    int converted;
+    assert(resource != NULL);
+
+    /* Let's first see if the value can be parsed into an integer directly. */
+    if (str2int(&converted, resource->value, 10) == 0)
+        return converted;
+
+    /* Next up, we take care of signal words. */
+    if (strcasecmp(resource->value, "true") == 0 ||
+            strcasecmp(resource->value, "on") == 0 ||
+            strcasecmp(resource->value, "yes") == 0) {
+        return 1;
+    }
+
+    if (strcasecmp(resource->value, "false") == 0 ||
+            strcasecmp(resource->value, "off") == 0 ||
+            strcasecmp(resource->value, "no") == 0) {
+        return 0;
+    }
+
+    /* Time to give up. */
+    return INT_MIN;
+}
+
 void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
+    assert(resource != NULL);
     FREE(resource->value);
     FREE(resource);
 }

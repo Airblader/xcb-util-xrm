@@ -47,10 +47,7 @@ typedef struct xcb_xrm_context_t xcb_xrm_context_t;
  * TODO Documentation
  *
  */
-typedef struct xcb_xrm_resource_t {
-    unsigned int size;
-    char *value;
-} xcb_xrm_resource_t;
+typedef struct xcb_xrm_resource_t xcb_xrm_resource_t;
 
 /**
  * TODO Documentation
@@ -81,6 +78,18 @@ int xcb_xrm_database_load(xcb_xrm_context_t *ctx);
  */
 int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
                          const char **res_type, xcb_xrm_resource_t **resource);
+
+/**
+ * TODO Documentation
+ *
+ */
+char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource);
+
+/**
+ * TODO Documentation
+ *
+ */
+int xcb_xrm_resource_value_int(xcb_xrm_resource_t *resource);
 
 /**
  * TODO Documentation

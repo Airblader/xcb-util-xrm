@@ -30,6 +30,7 @@
 #define __XRM_H__
 
 #include <sys/queue.h>
+#include <assert.h>
 #include <stdbool.h>
 
 #include "xcb_xrm.h"
@@ -44,6 +45,10 @@ struct xcb_xrm_context_t {
     char *resources;
 
     TAILQ_HEAD(database_head, xcb_xrm_entry_t) entries;
+};
+
+struct xcb_xrm_resource_t {
+    char *value;
 };
 
 /**

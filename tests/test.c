@@ -159,7 +159,8 @@ static int check_get_resource(xcb_xrm_context_t *ctx, const char *database,
     }
 
     err |= check_strings("String", type, "Expected <String>, but got <%s>\n", type);
-    err |= check_strings(value, resource->value, "Expected <%s>, but got <%s>\n", value, resource->value);
+    err |= check_strings(value, xcb_xrm_resource_value(resource), "Expected <%s>, but got <%s>\n",
+            value, resource->value);
 
 done_get_resource:
     if (resource != NULL) {

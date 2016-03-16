@@ -81,7 +81,6 @@ int xcb_xrm_match(xcb_xrm_context_t *ctx, xcb_xrm_entry_t *query_name, xcb_xrm_e
 
     if (best_match != NULL) {
         resource->value = sstrdup(best_match->entry->value);
-        resource->size = strlen(resource->value);
 
         __match_free(best_match);
         return SUCCESS;

@@ -33,6 +33,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <limits.h>
 #include <math.h>
 
 #include "util.h"
@@ -53,6 +54,26 @@ void *scalloc(size_t num, size_t size) {
     }
 
     return result;
+}
+
+int str2int(int *out, char *input, int base) {
+    char *end;
+    long result;
+
+    if (input[0] == '\0' || isspace(input[0]))
+        return -FAILURE;
+
+    errno = 0;
+    result = strtol(input, &end, base);
+    if (result > INT_MAX || (errno == ERANGE && result == LONG_MAX))
+        return -FAILURE;
+    if (result < INT_MIN || (errno == ERANGE && result == LONG_MIN))
+        return -FAILURE;
+    if (*end != '\0')
+        return -FAILURE;
+
+    *out = result;
+    return SUCCESS;
 }
 
 char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,
