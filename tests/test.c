@@ -142,14 +142,13 @@ static int check_parse_entry_error(const char *str, const int result) {
 static int check_get_resource(xcb_xrm_context_t *ctx, const char *database,
         const char *res_name, const char *res_class, const char *value) {
     bool err = false;
-    const char *type;
     xcb_xrm_resource_t *resource;
 
     fprintf(stderr, "== Assert that getting resource <%s> / <%s> returns <%s>\n",
             res_name, res_class, value);
 
     xcb_xrm_database_from_string(ctx, database);
-    if (xcb_xrm_resource_get(ctx, res_name, res_class, &type, &resource) < 0) {
+    if (xcb_xrm_resource_get(ctx, res_name, res_class, &resource) < 0) {
         if (value != NULL) {
             fprintf(stderr, "xcb_xrm_resource_get() < 0\n");
             err = true;
@@ -158,7 +157,6 @@ static int check_get_resource(xcb_xrm_context_t *ctx, const char *database,
         goto done_get_resource;
     }
 
-    err |= check_strings("String", type, "Expected <String>, but got <%s>\n", type);
     err |= check_strings(value, xcb_xrm_resource_value(resource), "Expected <%s>, but got <%s>\n",
             value, resource->value);
 

@@ -87,7 +87,7 @@ int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *str);
  *
  */
 int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
-                         const char **res_type, xcb_xrm_resource_t **resource);
+                         xcb_xrm_resource_t **resource);
 
 /**
  * TODO Documentation

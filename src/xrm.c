@@ -75,19 +75,17 @@ void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
 }
 
 int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
-                         const char **res_type, xcb_xrm_resource_t **_resource) {
+                         xcb_xrm_resource_t **_resource) {
     xcb_xrm_resource_t *resource;
     xcb_xrm_entry_t *query_name = NULL;
     xcb_xrm_entry_t *query_class = NULL;
     int result = 0;
 
     if (ctx->resources == NULL || TAILQ_EMPTY(&(ctx->entries))) {
-        *res_type = NULL;
         *_resource = NULL;
         return -1;
     }
 
-    *res_type = "String";
     *_resource = scalloc(1, sizeof(struct xcb_xrm_resource_t));
     resource = *_resource;
 
