@@ -259,6 +259,13 @@ static int test_get_resource(void) {
             "xmh.toc.messagefunctions.incorporate.activeForeground",
             "Xmh.Paned.Box.Command.Foreground",
             "black", false);
+    err |= check_get_resource("urxvt*background: [95]#000", "urxvt.background", "", "[95]#000", false);
+    err |= check_get_resource("urxvt*scrollBar_right:true", "urxvt.scrollBar_right", "", "true", false);
+    err |= check_get_resource("urxvt*cutchars:    '\"'()*<>[]{|}", "urxvt.cutchars", "", "'\"'()*<>[]{|}", false);
+    err |= check_get_resource("urxvt.keysym.Control-Shift-Up: perl:font:increment", "urxvt.keysym.Control-Shift-Up",
+            "", "perl:font:increment", false);
+    err |= check_get_resource("rofi.normal: #000000, #000000, #000000, #000000", "rofi.normal", "",
+            "#000000, #000000, #000000, #000000", false);
 
     return err;
 }
