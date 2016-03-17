@@ -161,9 +161,9 @@ int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resourc
                     goto done_error;
                 }
 
-                // TODO XXX We should also handle state.chunk == CS_INITIAL
-                // here, even though it's an exotic case.
-                if (state.chunk == CS_COMPONENTS) {
+                if (state.chunk == CS_INITIAL) {
+                    goto done_error;
+                } else if (state.chunk == CS_COMPONENTS) {
                     xcb_xrm_finalize_component(entry, &state);
                     state.chunk = CS_PRE_VALUE_WHITESPACE;
                     break;
