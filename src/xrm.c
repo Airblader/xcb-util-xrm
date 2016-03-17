@@ -43,6 +43,18 @@
 /* Forward declarations */
 static void xcb_xrm_database_free(xcb_xrm_context_t *ctx);
 
+/*
+ * Create a new @ref xcb_xrm_context_t.
+ *
+ * @param conn A working XCB connection. The connection must be kept open until
+ * after the context has been destroyed again.
+ * @param screen The xcb_screen_t to use.
+ * @param ctx A pointer to a xcb_xrm_context_t* which will be modified to
+ * refer to the newly created context.
+ * @return 0 on success, a negative error code otherwise.
+ *
+ * @ingroup xcb_xrm_context_t
+ */
 int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_context_t **c) {
     xcb_xrm_context_t *ctx = NULL;
 
@@ -69,11 +81,29 @@ static void xcb_xrm_database_free(xcb_xrm_context_t *ctx) {
     }
 }
 
+/*
+ * Destroys the @ref xcb_xrm_context_t.
+ *
+ * @param ctx The context to destroy.
+ */
 void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
     xcb_xrm_database_free(ctx);
     FREE(ctx);
 }
 
+/*
+ * Fetches a resource from the database.
+ *
+ * @param ctx The context to use.
+ * @param res_name The fully qualified resource name.
+ * @param res_class The fully qualified resource class. Note that this argument
+ * may be left empty / NULL, but if given, it must contain the same number of
+ * components as the resource name.
+ * @param resource A pointer to a xcb_xrm_resource_t* which will be modified to
+ * contain the matched resource. Note that this resource must be free'd by the
+ * caller.
+ * @return 0 on success, a negative error code otherwise.
+ */
 int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
                          xcb_xrm_resource_t **_resource) {
     xcb_xrm_resource_t *resource;
@@ -120,8 +150,10 @@ done:
 }
 
 /*
- * TODO Documentation
+ * Returns the string value of the resource.
  *
+ * @param resource The resource to use.
+ * @returns The string value of the given resource.
  */
 char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
     assert(resource != NULL);
@@ -129,8 +161,13 @@ char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
 }
 
 /*
- * TODO Documentation
+ * Converts the resource's value into an integer and returns it.
  *
+ * @param resource The resource to use.
+ * @returns The value as an integer if it was merely a number. Otherwise, this
+ * returns 0 for 'off', 'no' or 'false' and 1 for 'on', 'yes' and 'true',
+ * respectively, with all comparisons being case-insensitive. For all other
+ * values, INT_MIN is returned.
  */
 int xcb_xrm_resource_value_int(xcb_xrm_resource_t *resource) {
     int converted;
@@ -157,6 +194,11 @@ int xcb_xrm_resource_value_int(xcb_xrm_resource_t *resource) {
     return INT_MIN;
 }
 
+/*
+ * Destroy the given resource.
+ *
+ * @param resource The resource to destroy.
+ */
 void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
     assert(resource != NULL);
     FREE(resource->value);
@@ -164,12 +206,11 @@ void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
 }
 
 /*
- * Interprets the string as a resource list, parses it and stores it in the database of the context.
+ * Uses the given string as the database for this context.
  *
- * @param ctx Context.
- * @param str Resource string.
+ * @param ctx The context to use.
+ * @param str The resource string.
  * @return 0 on success, a negative error code otherwise.
- *
  */
 int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *str) {
     char *copy = sstrdup(str);
@@ -190,13 +231,11 @@ int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *str) {
 }
 
 /*
- * Initializes the database for the context by parsing the RESOURCE_MANAGER
- * property on the root window.
+ * Loads the RESOURCE_MANAGER property and uses it as the database for this
+ * context.
  *
- * @param ctx Context.
- *
+ * @param ctx The context to use.
  * @return 0 on success, a negative error code otherwise.
- *
  */
 int xcb_xrm_database_from_resource_manager(xcb_xrm_context_t *ctx) {
     char *resources = xcb_util_get_property(ctx->conn, ctx->screen->root, XCB_ATOM_RESOURCE_MANAGER,
