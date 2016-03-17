@@ -408,15 +408,19 @@ static char *check_get_resource_xlib(const char *str_database, const char *res_n
     int res_code;
     char *res_type;
     XrmValue res_value;
+    char *result;
 
     XrmDatabase database = XrmGetStringDatabase(str_database);
     res_code = XrmGetResource(database, res_name, res_class, &res_type, &res_value);
 
     if (res_code) {
-        return (char *)res_value.addr;
+        result = strdup((char *)res_value.addr);
     } else {
-        return NULL;
+        result = NULL;
     }
+
+    XrmDestroyDatabase(database);
+    return result;
 }
 
 static int check_get_resource(const char *database, const char *res_name, const char *res_class, const char *value,
@@ -438,6 +442,8 @@ static int check_get_resource(const char *database, const char *res_name, const 
         if (!expected_xlib_mismatch) {
             xlib_value = check_get_resource_xlib(database, res_name, res_class);
             err |= check_strings(NULL, xlib_value, "Returned NULL, but Xlib returned <%s>\n", xlib_value);
+            if (xlib_value != NULL)
+                free(xlib_value);
         }
 
         goto done_get_resource;
@@ -451,6 +457,8 @@ static int check_get_resource(const char *database, const char *res_name, const 
         xlib_value = check_get_resource_xlib(database, res_name, res_class);
         err |= check_strings(value, xlib_value, "Xlib returns <%s>, but expected <%s>\n",
                 xlib_value, value);
+        if (xlib_value != NULL)
+            free(xlib_value);
     }
 
 done_get_resource:
