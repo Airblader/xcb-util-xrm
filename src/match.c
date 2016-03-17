@@ -98,7 +98,6 @@ static int __match_matches(xcb_xrm_entry_t *db_entry, xcb_xrm_entry_t *query_nam
     xcb_xrm_component_t *cur_comp_name = TAILQ_FIRST(&(query_name->components));
     xcb_xrm_component_t *cur_comp_class = use_class ? TAILQ_FIRST(&(query_class->components)) : NULL;
     xcb_xrm_component_t *cur_comp_db = TAILQ_FIRST(&(db_entry->components));
-    xcb_xrm_component_t *next_comp_db = NULL;
 
 #define ADVANCE(entry) do {                      \
     if (entry != NULL)                           \
@@ -107,49 +106,45 @@ static int __match_matches(xcb_xrm_entry_t *db_entry, xcb_xrm_entry_t *query_nam
 
     int i = 0;
     while (cur_comp_name != NULL && (!use_class || cur_comp_class) && cur_comp_db != NULL) {
+        if (cur_comp_db->binding_type == BT_LOOSE)
+            match->flags[i] = MF_PRECEDING_LOOSE;
+
         switch (cur_comp_db->type) {
             case CT_NORMAL:
                 if (strcmp(cur_comp_db->name, cur_comp_name->name) == 0) {
-                    match->matches[i++] = MT_NAME | MT_EXACT;
+                    match->flags[i++] |= MF_NAME;
+
                     ADVANCE(cur_comp_db);
                     ADVANCE(cur_comp_name);
                     ADVANCE(cur_comp_class);
                 } else if (use_class && strcmp(cur_comp_db->name, cur_comp_class->name) == 0) {
-                    match->matches[i++] = MT_CLASS | MT_EXACT;
+                    match->flags[i++] |= MF_CLASS;
+
                     ADVANCE(cur_comp_db);
                     ADVANCE(cur_comp_name);
                     ADVANCE(cur_comp_class);
                 } else {
-                    return -FAILURE;
+                    if (cur_comp_db->binding_type == BT_TIGHT) {
+                        return -FAILURE;
+                    } else {
+                        /* We remove this flag again because we need to apply
+                         * it to the last component in the matching chain for
+                         * the loose binding. */
+                        match->flags[i] &= ~MF_PRECEDING_LOOSE;
+                        match->flags[i++] |= MF_SKIPPED;
+
+                        ADVANCE(cur_comp_name);
+                        ADVANCE(cur_comp_class);
+                    }
                 }
 
                 break;
-            case CT_WILDCARD_SINGLE:
-                match->matches[i++] = MT_SINGLE;
+            case CT_WILDCARD:
+                match->flags[i++] |= MF_WILDCARD;
+
                 ADVANCE(cur_comp_db);
                 ADVANCE(cur_comp_name);
                 ADVANCE(cur_comp_class);
-
-                break;
-            case CT_WILDCARD_MULTI:
-                next_comp_db = TAILQ_NEXT(cur_comp_db, components);
-                /* The '**' case should never happen as the parser hopefully collapsed those. */
-                if (next_comp_db->type == CT_WILDCARD_MULTI)
-                    return -FAILURE;
-
-                // TODO XXX This needs to be handled properly.
-                if (next_comp_db->type == CT_WILDCARD_SINGLE) {
-                    return -FAILURE;
-                }
-
-                if (strcmp(next_comp_db->name, cur_comp_name->name) == 0 ||
-                        (use_class && strcmp(next_comp_db->name, cur_comp_class->name) == 0)) {
-                    ADVANCE(cur_comp_db);
-                } else {
-                    match->matches[i++] = MT_MULTI;
-                    ADVANCE(cur_comp_name);
-                    ADVANCE(cur_comp_class);
-                }
 
                 break;
             default:
@@ -170,28 +165,25 @@ static int __match_matches(xcb_xrm_entry_t *db_entry, xcb_xrm_entry_t *query_nam
 
 static int __match_compare(int length, xcb_xrm_match_t *best, xcb_xrm_match_t *candidate) {
     for (int i = 0; i < length; i++) {
-        xcb_xrm_match_type_t mt_best = best->matches[i];
-        xcb_xrm_match_type_t mt_candidate = candidate->matches[i];
+        xcb_xrm_match_flags_t mt_best = best->flags[i];
+        xcb_xrm_match_flags_t mt_candidate = candidate->flags[i];
 
         /* Precedence rule #1: Matching components, including '?', outweigh '*'. */
-        if (mt_best & MT_MULTI && (mt_candidate & MT_EXACT || mt_candidate & MT_SINGLE))
+        if (mt_best & MF_SKIPPED &&
+                (mt_candidate & MF_NAME || mt_candidate & MF_CLASS || mt_candidate & MF_WILDCARD))
             return SUCCESS;
 
         /* Precedence rule #2: Matching name outweighs both matching class and '?'.
          *                     Matching class outweighs '?'. */
-        if ((mt_best & MT_CLASS || mt_best & MT_SINGLE) &&
-                (mt_candidate & MT_NAME && mt_candidate & MT_EXACT))
+        if ((mt_best & MF_CLASS || mt_best & MF_WILDCARD) && mt_candidate & MF_NAME)
             return SUCCESS;
 
-        if (mt_best & MT_SINGLE &&
-                (mt_candidate & MT_CLASS && mt_candidate & MT_EXACT))
+        if (mt_best & MF_WILDCARD && mt_candidate & MF_CLASS)
             return SUCCESS;
 
         /* Precedence rule #3: A preceding exact match outweighs a preceding '*'. */
-        if (i != 0) {
-            if (best->matches[i-1] & MT_MULTI && candidate->matches[i-1] & MT_EXACT)
-                return SUCCESS;
-        }
+        if (mt_best & MF_PRECEDING_LOOSE && !(mt_candidate & MF_PRECEDING_LOOSE))
+            return SUCCESS;
     }
 
     return -FAILURE;
@@ -200,11 +192,11 @@ static int __match_compare(int length, xcb_xrm_match_t *best, xcb_xrm_match_t *c
 static xcb_xrm_match_t *__match_new(int length) {
     xcb_xrm_match_t *match = scalloc(1, sizeof(struct xcb_xrm_match_t));
     match->entry = NULL;
-    match->matches = scalloc(1, length * sizeof(xcb_xrm_match_type_t));
+    match->flags = scalloc(1, length * sizeof(xcb_xrm_match_flags_t));
     return match;
 }
 
 static void __match_free(xcb_xrm_match_t *match) {
-    FREE(match->matches);
+    FREE(match->flags);
     FREE(match);
 }

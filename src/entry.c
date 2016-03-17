@@ -56,7 +56,7 @@ static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_sta
  *
  */
 static void xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
-        const char *str) {
+        xcb_xrm_binding_type_t binding_type, const char *str) {
     xcb_xrm_component_t *new;
 
     new = scalloc(1, sizeof(struct xcb_xrm_component_t));
@@ -66,6 +66,7 @@ static void xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_t
     }
 
     new->type = type;
+    new->binding_type = binding_type;
     TAILQ_INSERT_TAIL(&(entry->components), new, components);
 }
 
@@ -77,23 +78,12 @@ static void xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_t
 static void xcb_xrm_finalize_component(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_state_t *state) {
     if (state->buffer_pos != NULL && state->buffer_pos != state->buffer) {
         *(state->buffer_pos) = '\0';
-        xcb_xrm_insert_component(entry, state->current_type, state->buffer);
+        xcb_xrm_insert_component(entry, CT_NORMAL, state->current_binding_type, state->buffer);
     }
 
     memset(&(state->buffer), 0, sizeof(state->buffer));
     state->buffer_pos = state->buffer;
-    state->current_type = CT_NORMAL;
-}
-
-/**
- * Append a new component of the given type.
- * This function checks whether there is an open buffer and finalizes it if necessary.
- *
- */
-static void xcb_xrm_append_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
-        xcb_xrm_entry_parser_state_t *state, const char *str) {
-    xcb_xrm_finalize_component(entry, state);
-    xcb_xrm_insert_component(entry, type, str);
+    state->current_binding_type = BT_TIGHT;
 }
 
 /*
@@ -117,7 +107,7 @@ int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resourc
 
     xcb_xrm_entry_parser_state_t state = {
         .chunk = CS_INITIAL,
-        .current_type = CT_NORMAL,
+        .current_binding_type = BT_TIGHT,
     };
 
     /* Copy the input string since it's const. */
@@ -131,13 +121,18 @@ int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resourc
     for (walk = str; *walk != '\0'; walk++) {
         switch (*walk) {
             case '.':
+            case '*':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
                 if (state.chunk >= CS_PRE_VALUE_WHITESPACE) {
                     goto process_normally;
                 }
 
+                if (*walk == '*' && resource_only) {
+                    goto done_error;
+                }
+
                 xcb_xrm_finalize_component(entry, &state);
-                state.current_type = CT_NORMAL;
+                state.current_binding_type = (*walk == '.') ? BT_TIGHT : BT_LOOSE;
                 break;
             case '?':
                 state.chunk = MAX(state.chunk, CS_COMPONENTS);
@@ -149,25 +144,7 @@ int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resourc
                     goto done_error;
                 }
 
-                xcb_xrm_append_component(entry, CT_WILDCARD_SINGLE, &state, NULL);
-                break;
-            case '*':
-                state.chunk = MAX(state.chunk, CS_COMPONENTS);
-                if (state.chunk >= CS_PRE_VALUE_WHITESPACE) {
-                    goto process_normally;
-                }
-
-                if (resource_only) {
-                    goto done_error;
-                }
-
-                /* We can ignore a '*' if the previous component was also one. */
-                last = TAILQ_LAST(&(entry->components), components_head);
-                if (last != NULL && last->type == CT_WILDCARD_MULTI) {
-                    break;
-                }
-
-                xcb_xrm_append_component(entry, CT_WILDCARD_MULTI, &state, NULL);
+                xcb_xrm_insert_component(entry, CT_WILDCARD, state.current_binding_type, NULL);
                 break;
             case ' ':
             case '\t':
@@ -200,6 +177,15 @@ process_normally:
 
                 if (state.chunk == CS_PRE_VALUE_WHITESPACE) {
                     state.chunk = CS_VALUE;
+                }
+
+                if (state.chunk == CS_COMPONENTS) {
+                    if ((*walk != '_' && *walk != '-') &&
+                            (*walk < '0' || *walk > '9') &&
+                            (*walk < 'a' || *walk > 'z') &&
+                            (*walk < 'A' || *walk > 'Z')) {
+                        goto done_error;
+                    }
                 }
 
                 if (state.chunk < CS_VALUE) {

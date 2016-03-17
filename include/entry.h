@@ -45,17 +45,23 @@ typedef enum {
 typedef enum {
     /* A "normal" component, i.e., a name/class is given. */
     CT_NORMAL = 0,
-    /* A single wildcard component ("?"). */
-    CT_WILDCARD_SINGLE = 1,
-    /* A multi wildcard component ("*"). */
-    CT_WILDCARD_MULTI = 2
+    /* A wildcard component ("?"). */
+    CT_WILDCARD = 1,
 } xcb_xrm_component_type_t;
+
+/** The binding type of a component. */
+typedef enum {
+    BT_TIGHT = 0,
+    BT_LOOSE = 1
+} xcb_xrm_binding_type_t;
 
 /** One component of a resource, either in the name or class. */
 typedef struct xcb_xrm_component_t {
     /* The type of this component. */
     xcb_xrm_component_type_t type;
-    /* This component's name. Only useful for CT_NORMAL. */
+    /* The binding type of this component. */
+    xcb_xrm_binding_type_t binding_type;
+    /* This component's name. Only useful if the type is CT_NORMAL. */
     char *name;
 
     TAILQ_ENTRY(xcb_xrm_component_t) components;
@@ -66,7 +72,7 @@ typedef struct xcb_xrm_entry_parser_state_t {
     xcb_xrm_entry_parser_chunk_status_t chunk;
     char buffer[4096];
     char *buffer_pos;
-    xcb_xrm_component_type_t current_type;
+    xcb_xrm_binding_type_t current_binding_type;
 } xcb_xrm_entry_parser_state_t;
 
 /**
