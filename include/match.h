@@ -32,23 +32,29 @@
 #include "xrm.h"
 #include "entry.h"
 
-typedef enum xcb_xrm_match_type_t {
+/** Information about a matched component. */
+typedef enum xcb_xrm_match_flags_t {
     MT_NONE = 1 << 0,
 
-    MT_CLASS = 1 << 1,
-    MT_NAME = 1 << 2,
+    /* The component was matched on the name. */
+    MF_NAME = 1 << 1,
+    /* The component was matched on the class. */
+    MF_CLASS = 1 << 2,
+    /* The component was matched via a '?' wildcard. */
+    MF_WILDCARD = 1 << 3,
+    /* The component was matched as part of a loose binding. */
+    MF_SKIPPED = 1 << 4,
 
-    MT_EXACT = 1 << 3,
-    MT_SINGLE = 1 << 4,
-    MT_MULTI = 1 << 5
-} xcb_xrm_match_type_t;
+    /* This component was preceded by a loose binding. */
+    MF_PRECEDING_LOOSE = 1 << 5,
+} xcb_xrm_match_flags_t;
 
 typedef struct xcb_xrm_match_t {
     /* Reference to the database entry this match refers to. */
 	xcb_xrm_entry_t *entry;
     /* An array where the n-th element describes how the n-th element of the
      * query strings was matched. */
-	int *matches;
+	int *flags;
 } xcb_xrm_match_t;
 
 /**

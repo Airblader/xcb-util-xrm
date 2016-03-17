@@ -77,10 +77,11 @@ static bool check_ints(const int expected, const int actual,
     return true;
 }
 
-static int check_parse_entry(const char *str, const char *value, const int count, ...) {
+static int check_parse_entry(const char *str, const char *value, const char *bindings, const int count, ...) {
     xcb_xrm_entry_t *entry;
     xcb_xrm_component_t *component;
     int actual_length = 0;
+    int i = 0;
     va_list ap;
 
     fprintf(stderr, "== Assert that parsing \"%s\" is successful\n", str);
@@ -109,16 +110,30 @@ static int check_parse_entry(const char *str, const char *value, const int count
     va_start(ap, count);
     TAILQ_FOREACH(component, &(entry->components), components) {
         const char *curr = va_arg(ap, const char *);
+        char tmp[2] = "\0";
 
-        switch(component->type) {
-            case CT_WILDCARD_SINGLE:
+        switch (component->type) {
+            case CT_WILDCARD:
                 err |= check_strings("?", curr, "Expected '?', but got <%s>\n", curr);
                 break;
-            case CT_WILDCARD_MULTI:
-                err |= check_strings("*", curr, "Expected '*', but got <%s>\n", curr);
+            case CT_NORMAL:
+                err |= check_strings(component->name, curr, "Expected <%s>, but got <%s>\n", component->name, curr);
                 break;
             default:
-                err |= check_strings(component->name, curr, "Expected <%s>, but got <%s>\n", component->name, curr);
+                err = true;
+                break;
+        }
+
+        tmp[0] = bindings[i++];
+        switch (component->binding_type) {
+            case BT_TIGHT:
+                err |= check_strings(tmp, ".", "Expected <%s>, but got <.>\n", tmp);
+                break;
+            case BT_LOOSE:
+                err |= check_strings(tmp, "*", "Expected <%s>, but got <*>\n", tmp);
+                break;
+            default:
+                err = true;
                 break;
         }
     }
@@ -173,42 +188,53 @@ static int test_entry_parser(void) {
 
     check_parse_entry_resource_only = false;
 
-    /* Basic parsing */
-    err |= check_parse_entry("Xft.dpi: 96", "96", 2, "Xft", "dpi");
-    err |= check_parse_entry("*color0: #abcdef", "#abcdef", 2, "*", "color0");
-    err |= check_parse_entry("*Menu?colors.blue: 0", "0", 5, "*", "Menu", "?", "colors", "blue");
-
+    /* Basics */
+    err |= check_parse_entry("First: 1", "1", ".", 1, "First");
+    err |= check_parse_entry("First.second: 1", "1", "..", 2, "First", "second");
+    err |= check_parse_entry("First..second: 1", "1", "..", 2, "First", "second");
+    /* Wildcards */
+    err |= check_parse_entry("?.second: 1", "1", "..", 2, "?", "second");
+    err |= check_parse_entry("First.?.third: 1", "1", "...", 3, "First", "?", "third");
+    /* Loose bindings */
+    err |= check_parse_entry("*second: 1", "1", "*", 1, "second");
+    err |= check_parse_entry("First*third: 1", "1", ".*", 2, "First", "third");
+    err |= check_parse_entry("First**third: 1", "1", ".*", 2, "First", "third");
+    /* Combinations */
+    err |= check_parse_entry("First*?.fourth: 1", "1", ".*.", 3, "First", "?", "fourth");
+    /* Values */
+    err |= check_parse_entry("First: 1337", "1337", ".", 1, "First");
+    err |= check_parse_entry("First: -1337", "-1337", ".", 1, "First");
+    err |= check_parse_entry("First: 13.37", "13.37", ".", 1, "First");
+    err |= check_parse_entry("First: value", "value", ".", 1, "First");
+    err |= check_parse_entry("First: #abcdef", "#abcdef", ".", 1, "First");
+    err |= check_parse_entry("First: { key: 'value' }", "{ key: 'value' }", ".", 1, "First");
+    err |= check_parse_entry("First: x?y", "x?y", ".", 1, "First");
+    err |= check_parse_entry("First: x*y", "x*y", ".", 1, "First");
     /* Whitespace */
-    err |= check_parse_entry("*Menu.color10:\t#000000", "#000000", 3, "*", "Menu", "color10");
-    err |= check_parse_entry("?Foo.Bar?Baz?la:\t\t \tA\tB C:D ", "A\tB C:D ", 7,
-            "?", "Foo", "Bar", "?", "Baz", "?", "la");
+    err |= check_parse_entry("First:    x", "x", ".", 1, "First");
+    err |= check_parse_entry("First: x   ", "x   ", ".", 1, "First");
+    err |= check_parse_entry("First:    x   ", "x   ", ".", 1, "First");
+    err |= check_parse_entry("First:x", "x", ".", 1, "First");
+    err |= check_parse_entry("First: \t x", "x", ".", 1, "First");
+    err |= check_parse_entry("First: \t x \t", "x \t", ".", 1, "First");
 
-    /* Subsequent '*' */
-    err |= check_parse_entry("Foo**baz: x", "x", 3, "Foo", "*", "baz");
-
-    /* Wildcards within the value. */
-    err |= check_parse_entry("Foo: x.y", "x.y", 1, "Foo");
-    err |= check_parse_entry("Foo: x?y", "x?y", 1, "Foo");
-    err |= check_parse_entry("Foo: x*y", "x*y", 1, "Foo");
-
-    /* Wildcards as last component */
-    err |= check_parse_entry_error("Foo?: x", -1);
-    err |= check_parse_entry_error("Foo*: x", -1);
-
-    /* No / invalid resource */
-    err |= check_parse_entry_error(": x", -1);
-    err |= check_parse_entry_error("Foo", -1);
-    err |= check_parse_entry_error("Foo? Bar", -1);
+    /* Invalid entries */
+    err |= check_parse_entry_error(": 1", -1);
+    err |= check_parse_entry_error("?: 1", -1);
+    err |= check_parse_entry_error("First", -1);
+    err |= check_parse_entry_error("First second", -1);
+    err |= check_parse_entry_error("First.?: 1", -1);
+    err |= check_parse_entry_error("Först: 1", -1);
+    err |= check_parse_entry_error("F~rst: 1", -1);
 
     /* Test for parsing a resource used for queries. */
     check_parse_entry_resource_only = true;
-
-    err |= check_parse_entry("Foo.baz", NULL, 2, "Foo", "baz");
-    err |= check_parse_entry_error("Foo.baz: on", -1);
-    err |= check_parse_entry_error("Foo*baz", -1);
-    err |= check_parse_entry_error("Foo?baz", -1);
-    err |= check_parse_entry_error("*baz", -1);
-    err |= check_parse_entry_error("?baz", -1);
+    err |= check_parse_entry("First.second", NULL, "..", 2, "First", "second");
+    err |= check_parse_entry_error("First.second: on", -1);
+    err |= check_parse_entry_error("First*second", -1);
+    err |= check_parse_entry_error("First.?.second", -1);
+    err |= check_parse_entry_error("*second", -1);
+    err |= check_parse_entry_error("?.second", -1);
 
     return err;
 }
@@ -237,51 +263,104 @@ static int test_get_resource(void) {
         return true;
     }
 
+    /* Non-matches / Errors */
     err |= check_get_resource(ctx, "", "", "", NULL);
     err |= check_get_resource(ctx, "", NULL, "", NULL);
     err |= check_get_resource(ctx, "", "", NULL, NULL);
     err |= check_get_resource(ctx, "", NULL, NULL, NULL);
+    err |= check_get_resource(ctx, "First.second: 1", "First.second", "First.second.third", NULL);
+    err |= check_get_resource(ctx, "", "First.second", "", NULL);
+    err |= check_get_resource(ctx, "First.second: 1", "First.third", "", NULL);
+    err |= check_get_resource(ctx, "First.second: 1", "First", "", NULL);
+    err |= check_get_resource(ctx, "First: 1", "First.second", "", NULL);
+    err |= check_get_resource(ctx, "First.?.fourth: 1", "First.second.third.fourth", "", NULL);
+    err |= check_get_resource(ctx, "First*?.third: 1", "First.third", "", NULL);
+    err |= check_get_resource(ctx, "First: 1", "first", "", NULL);
+    err |= check_get_resource(ctx, "First: 1", "", "first", NULL);
 
-    err |= check_get_resource(ctx, "Xft*dpi", "Xft.dpi", "Xft.toomuch.dpi", NULL);
+    /* Basic matching */
+    err |= check_get_resource(ctx, "First: 1", "First", "", "1");
+    err |= check_get_resource(ctx, "First.second: 1", "First.second", "", "1");
+    err |= check_get_resource(ctx, "?.second: 1", "First.second", "", "1");
+    err |= check_get_resource(ctx, "First.?.third: 1", "First.second.third", "", "1");
+    err |= check_get_resource(ctx, "First.?.?.fourth: 1", "First.second.third.fourth", "", "1");
+    err |= check_get_resource(ctx, "*second: 1", "First.second", "", "1");
+    err |= check_get_resource(ctx, "*third: 1", "First.second.third", "", "1");
+    err |= check_get_resource(ctx, "First*second: 1", "First.second", "", "1");
+    err |= check_get_resource(ctx, "First*third: 1", "First.second.third", "", "1");
+    err |= check_get_resource(ctx, "First*fourth: 1", "First.second.third.fourth", "", "1");
+//  err |= check_get_resource(ctx, "First*?.third: 1", "First.second.third", "", "1");
+    err |= check_get_resource(ctx, "First: 1", "Second", "First", "1");
+    err |= check_get_resource(ctx, "First.second: 1", "First.third", "first.second", "1");
+    err |= check_get_resource(ctx, "First.second.third: 1", "First.third.third", "first.second.fourth", "1");
+    /* Matching among multiple entries */
+    err |= check_get_resource(ctx,
+            "First: 1\n"
+            "Second: 2\n",
+            "First", "", "1");
+    err |= check_get_resource(ctx,
+            "First: 1\n"
+            "Second: 2\n",
+            "Second", "", "2");
 
-    err |= check_get_resource(ctx, "", "Xft.dpi", "", NULL);
-    err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.display", "", NULL);
-    err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.dpi", "", "96");
-    err |= check_get_resource(ctx, "Foo.baz: on\nXft.dpi: 96\nNothing?to.see: off", "Xft.dpi", "", "96");
-    err |= check_get_resource(ctx, "Xft.dpi.trailingnonsense: 96", "Xft.dpi", "", NULL);
-    err |= check_get_resource(ctx, "Xft.dpi: 96", "Xft.dpi.trailingnonsense", "", NULL);
+    /* Precedence rules */
+    /* Rule 1 */
+    err |= check_get_resource(ctx,
+            "First.second.third: 1\n"
+            "First*third: 2\n",
+            "First.second.third", "", "1");
+    err |= check_get_resource(ctx,
+            "First*third: 2\n"
+            "First.second.third: 1\n",
+            "First.second.third", "", "1");
+    err |= check_get_resource(ctx,
+            "First.second.third: 1\n"
+            "First*third: 2\n",
+            "x.x.x", "First.second.third", "1");
+    err |= check_get_resource(ctx,
+            "First*third: 2\n"
+            "First.second.third: 1\n",
+            "x.x.x", "First.second.third", "1");
 
-    /* Basic '?' tests */
-    err |= check_get_resource(ctx, "?dpi: 96", "Xft.dpi", "", "96");
-    err |= check_get_resource(ctx, "A?C.d: 96", "A.B.C.d", "", "96");
-    err |= check_get_resource(ctx, "A??d: 96", "A.B.C.d", "", "96");
-    err |= check_get_resource(ctx, "A?d: 96", "A.B.C.d", "", NULL);
+    /* Rule 2 */
+    err |= check_get_resource(ctx,
+            "First.second: 1\n"
+            "First.third: 2\n",
+            "First.second", "First.third", "1");
+    err |= check_get_resource(ctx,
+            "First.third: 2\n"
+            "First.second: 1\n",
+            "First.second", "First.third", "1");
+    err |= check_get_resource(ctx,
+            "First.second.third: 1\n"
+            "First.?.third: 2\n",
+            "First.second.third", "", "1");
+    err |= check_get_resource(ctx,
+            "First.?.third: 2\n"
+            "First.second.third: 1\n",
+            "First.second.third", "", "1");
+    err |= check_get_resource(ctx,
+            "First.second.third: 1\n"
+            "First.?.third: 2\n",
+            "x.x.x", "First.second.third", "1");
+    err |= check_get_resource(ctx,
+            "First.?.third: 2\n"
+            "First.second.third: 1\n",
+            "x.x.x", "First.second.third", "1");
+    /* Rule 3 */
+    err |= check_get_resource(ctx,
+            "First.second: 1\n"
+            "First*second: 2\n",
+            "First.second", "", "1");
+    err |= check_get_resource(ctx,
+            "First*second: 2\n"
+            "First.second: 1\n",
+            "First.second", "", "1");
 
-    /* Basic '*' tests */
-    err |= check_get_resource(ctx, "*dpi: 96", "Xft.dpi", "", "96");
-    err |= check_get_resource(ctx, "Xft*dpi: 96", "Xft.dpi", "", "96");
-    err |= check_get_resource(ctx, "Xft**dpi: 96", "Xft.dpi", "", "96");
-    err |= check_get_resource(ctx, "Xft**dpi: 96", "Xft.bla.dpi", "", "96");
-    err |= check_get_resource(ctx, "Xft*?dpi: 96", "Xft.dpi", "", NULL);
-//    err |= check_get_resource(ctx, "Xft*?dpi: 96", "Xft.foo.dpi", "", "96");
+    /* Some real world examples. May contain duplicates to the above tests. */
 
-    /* Basic precedence tests*/
-    err |= check_get_resource(ctx, "Xft*dpi: 96\nXft.foo.dpi: 97", "Xft.foo.dpi", "", "97");
-    err |= check_get_resource(ctx, "Xft.foo.dpi: 96\nXft*dpi: 97", "Xft.foo.dpi", "", "96");
-    err |= check_get_resource(ctx, "Xft?dpi: 96\nXft*dpi: 97", "Xft.foo.dpi", "", "96");
-    err |= check_get_resource(ctx, "Xft*dpi: 96\nXft?dpi: 97", "Xft.foo.dpi", "", "97");
-    err |= check_get_resource(ctx, "Xft.foo.dpi: 96\nXft?dpi: 97", "Xft.foo.dpi", "", "96");
-
-    /* Tests for using a class string as well. */
-    err |= check_get_resource(ctx, "A.b.C.d: 42", "A.notme.C.notme", "notme.b.notme.d", "42");
-    err |= check_get_resource(ctx, "A.b.c: 42", "A.B.C", "a.b.c", "42");
-    err |= check_get_resource(ctx, "A.B.C: 1\nA.b.c: 2", "A.B.C", "A.b.c", "1");
-    err |= check_get_resource(ctx, "A.b.c: 2\nA.B.C: 1", "A.B.C", "A.b.c", "1");
-    err |= check_get_resource(ctx, "A*c: 1\nA.b.c: 2", "X.Y.Z", "A.b.c", "2");
-    err |= check_get_resource(ctx, "A*c: 1\nA?c: 2", "X.Y.Z", "A.b.c", "2");
-
-    // Example from the specification:
-    // https://tronche.com/gui/x/xlib/resource-manager/matching-rules.html
+    /* From the specification:
+     * https://tronche.com/gui/x/xlib/resource-manager/matching-rules.html */
     err |= check_get_resource(ctx,
             "xmh*Paned*activeForeground: red\n"
             "*incorporate.Foreground: blue\n"
