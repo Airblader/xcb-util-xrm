@@ -217,6 +217,14 @@ static int test_entry_parser(void) {
     err |= check_parse_entry("First:x", "x", ".", 1, "First");
     err |= check_parse_entry("First: \t x", "x", ".", 1, "First");
     err |= check_parse_entry("First: \t x \t", "x \t", ".", 1, "First");
+    /* Special characters */
+    err |= check_parse_entry("First: \\ x", " x", ".", 1, "First");
+    err |= check_parse_entry("First: \\\tx", "\tx", ".", 1, "First");
+    err |= check_parse_entry("First: \\011x", "\tx", ".", 1, "First");
+    err |= check_parse_entry("First: x\\\\x", "x\\x", ".", 1, "First");
+    err |= check_parse_entry("First: x\\nx", "x\nx", ".", 1, "First");
+    err |= check_parse_entry("First: \\080", "\\080", ".", 1, "First");
+    err |= check_parse_entry("First: \\00a", "\\00a", ".", 1, "First");
 
     /* Invalid entries */
     err |= check_parse_entry_error(": 1", -1);

@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <sys/queue.h>
 
@@ -191,8 +192,31 @@ process_normally:
                 if (state.chunk < CS_VALUE) {
                     xcb_xrm_append_char(entry, &state, *walk);
                 } else {
-                    *(value_pos++) = *walk;
+                    if (*walk == '\\') {
+                        if (*(walk + 1) == ' ') {
+                            *(value_pos++) = ' ';
+                            walk++;
+                        } else if (*(walk + 1) == '\t') {
+                            *(value_pos++) = '\t';
+                            walk++;
+                        } else if (*(walk + 1) == '\\') {
+                            *(value_pos++) = '\\';
+                            walk++;
+                        } else if (*(walk + 1) == 'n') {
+                            *(value_pos++) = '\n';
+                            walk++;
+                        } else if (isdigit(*(walk + 1)) && isdigit(*(walk + 2)) && isdigit(*(walk + 3)) &&
+                                *(walk + 1) < '8' && *(walk + 2) < '8' && *(walk + 3) < '8') {
+                            *(value_pos++) = (*(walk + 1) - '0') * 64 + (*(walk + 2) - '0') * 8 + (*(walk + 3) - '0');
+                            walk += 3;
+                        } else {
+                            *(value_pos++) = *walk;
+                        }
+                    } else {
+                        *(value_pos++) = *walk;
+                    }
                 }
+
                 break;
         }
     }
