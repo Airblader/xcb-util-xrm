@@ -217,6 +217,14 @@ static int test_entry_parser(void) {
     err |= check_parse_entry("First:x", "x", ".", 1, "First");
     err |= check_parse_entry("First: \t x", "x", ".", 1, "First");
     err |= check_parse_entry("First: \t x \t", "x \t", ".", 1, "First");
+    /* Special characters */
+    err |= check_parse_entry("First: \\ x", " x", ".", 1, "First");
+    err |= check_parse_entry("First: \\\tx", "\tx", ".", 1, "First");
+    err |= check_parse_entry("First: \\011x", "\tx", ".", 1, "First");
+    err |= check_parse_entry("First: x\\\\x", "x\\x", ".", 1, "First");
+    err |= check_parse_entry("First: x\\nx", "x\nx", ".", 1, "First");
+    err |= check_parse_entry("First: \\080", "\\080", ".", 1, "First");
+    err |= check_parse_entry("First: \\00a", "\\00a", ".", 1, "First");
 
     /* Invalid entries */
     err |= check_parse_entry_error(": 1", -1);
@@ -294,6 +302,7 @@ static int test_get_resource(void) {
     err |= check_get_resource(ctx, "First.second: 1", "First.third", "first.second", "1");
     err |= check_get_resource(ctx, "First.second.third: 1", "First.third.third", "first.second.fourth", "1");
     err |= check_get_resource(ctx, "First*third*fifth: 1", "First.second.third.fourth.third.fifth", "", "1");
+    err |= check_get_resource(ctx, "First: x\\\ny", "First", "", "xy");
     /* Matching among multiple entries */
     err |= check_get_resource(ctx,
             "First: 1\n"

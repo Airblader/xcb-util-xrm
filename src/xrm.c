@@ -212,21 +212,45 @@ void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
  * @param str The resource string.
  * @return 0 on success, a negative error code otherwise.
  */
-int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *str) {
-    char *copy = sstrdup(str);
+int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *_str) {
+    char *str = sstrdup(_str);
+
+    int num_continuations = 0;
+    char *str_continued;
+    char *outwalk;
 
     xcb_xrm_database_free(ctx);
     ctx->resources = sstrdup(str);
 
-    // TODO XXX Don't split on "\\n", which is an escaped newline.
-    for (char *line = strtok(copy, "\n"); line != NULL; line = strtok(NULL, "\n")) {
+    /* Count the number of line continuations. */
+    for (char *walk = str; *walk != '\0'; walk++) {
+        if (*walk == '\\' && *(walk + 1) == '\n') {
+            num_continuations++;
+        }
+    }
+
+    /* Take care of line continuations. */
+    str_continued = scalloc(1, strlen(str) + 1 - 2 * num_continuations);
+    outwalk = str_continued;
+    for (char *walk = str; *walk != '\0'; walk++) {
+        if (*walk == '\\' && *(walk + 1) == '\n') {
+            walk++;
+            continue;
+        }
+
+        *(outwalk++) = *walk;
+    }
+    *outwalk = '\0';
+
+    for (char *line = strtok(str_continued, "\n"); line != NULL; line = strtok(NULL, "\n")) {
         xcb_xrm_entry_t *entry;
         if (xcb_xrm_entry_parse(line, &entry, false) == 0 && entry != NULL) {
             TAILQ_INSERT_TAIL(&(ctx->entries), entry, entries);
         }
     }
 
-    FREE(copy);
+    FREE(str);
+    FREE(str_continued);
     return SUCCESS;
 }
 
