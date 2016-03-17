@@ -2,7 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 MAINTAINERCLEANFILES = ChangeLog INSTALL Makefile.in
 
-TEST_LIBS = $(shell pkg-config --libs xcb-aux)
+TEST_LIBS = $(shell pkg-config --libs x11 x11-xcb xcb xcb-aux)
 
 .PHONY: ChangeLog INSTALL
 
