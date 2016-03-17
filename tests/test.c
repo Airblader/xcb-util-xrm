@@ -293,6 +293,7 @@ static int test_get_resource(void) {
     err |= check_get_resource(ctx, "First: 1", "Second", "First", "1");
     err |= check_get_resource(ctx, "First.second: 1", "First.third", "first.second", "1");
     err |= check_get_resource(ctx, "First.second.third: 1", "First.third.third", "first.second.fourth", "1");
+    err |= check_get_resource(ctx, "First*third*fifth: 1", "First.second.third.fourth.third.fifth", "", "1");
     /* Matching among multiple entries */
     err |= check_get_resource(ctx,
             "First: 1\n"
