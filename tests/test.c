@@ -28,7 +28,8 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include <xcb/xcb.h>
+#include <X11/Xlib-xcb.h>
+#include <X11/Xresource.h>
 #include <xcb/xcb_aux.h>
 
 #include "xrm.h"
@@ -41,6 +42,7 @@
 
 #define SKIP 77
 
+static Display *display;
 static xcb_connection_t *conn;
 static xcb_screen_t *screen;
 static xcb_xrm_context_t *ctx;
@@ -63,7 +65,9 @@ static bool check_ints(const int expected, const int actual,
 /* Utilities */
 static int check_parse_entry(const char *str, const char *value, const char *bindings, const int count, ...);
 static int check_parse_entry_error(const char *str, const int result);
-static int check_get_resource(const char *database, const char *res_name, const char *res_class, const char *value);
+static char *check_get_resource_xlib(const char *str_database, const char *res_name, const char *res_class);
+static int check_get_resource(const char *database, const char *res_name, const char *res_class, const char *value,
+        bool expected_xlib_mismatch);
 
 int main(void) {
     bool err = false;
@@ -144,102 +148,103 @@ static int test_get_resource(void) {
     bool err = false;
 
     /* Non-matches / Errors */
-    err |= check_get_resource("", "", "", NULL);
-    err |= check_get_resource("", NULL, "", NULL);
-    err |= check_get_resource("", "", NULL, NULL);
-    err |= check_get_resource("", NULL, NULL, NULL);
-    err |= check_get_resource("First.second: 1", "First.second", "First.second.third", NULL);
-    err |= check_get_resource("", "First.second", "", NULL);
-    err |= check_get_resource("First.second: 1", "First.third", "", NULL);
-    err |= check_get_resource("First.second: 1", "First", "", NULL);
-    err |= check_get_resource("First: 1", "First.second", "", NULL);
-    err |= check_get_resource("First.?.fourth: 1", "First.second.third.fourth", "", NULL);
-    err |= check_get_resource("First*?.third: 1", "First.third", "", NULL);
-    err |= check_get_resource("First: 1", "first", "", NULL);
-    err |= check_get_resource("First: 1", "", "first", NULL);
+    err |= check_get_resource("", "", "", NULL, false);
+    err |= check_get_resource("", NULL, "", NULL, false);
+    err |= check_get_resource("", "", NULL, NULL, false);
+    err |= check_get_resource("", NULL, NULL, NULL, false);
+    /* Xlib returns the match here, despite the query violating the specs. */
+    err |= check_get_resource("First.second: 1", "First.second", "First.second.third", NULL, true);
+    err |= check_get_resource("", "First.second", "", NULL, false);
+    err |= check_get_resource("First.second: 1", "First.third", "", NULL, false);
+    err |= check_get_resource("First.second: 1", "First", "", NULL, false);
+    err |= check_get_resource("First: 1", "First.second", "", NULL, false);
+    err |= check_get_resource("First.?.fourth: 1", "First.second.third.fourth", "", NULL, false);
+    err |= check_get_resource("First*?.third: 1", "First.third", "", NULL, false);
+    err |= check_get_resource("First: 1", "first", "", NULL, false);
+    err |= check_get_resource("First: 1", "", "first", NULL, false);
 
     /* Basic matching */
-    err |= check_get_resource("First: 1", "First", "", "1");
-    err |= check_get_resource("First.second: 1", "First.second", "", "1");
-    err |= check_get_resource("?.second: 1", "First.second", "", "1");
-    err |= check_get_resource("First.?.third: 1", "First.second.third", "", "1");
-    err |= check_get_resource("First.?.?.fourth: 1", "First.second.third.fourth", "", "1");
-    err |= check_get_resource("*second: 1", "First.second", "", "1");
-    err |= check_get_resource("*third: 1", "First.second.third", "", "1");
-    err |= check_get_resource("First*second: 1", "First.second", "", "1");
-    err |= check_get_resource("First*third: 1", "First.second.third", "", "1");
-    err |= check_get_resource("First*fourth: 1", "First.second.third.fourth", "", "1");
-//  err |= check_get_resource("First*?.third: 1", "First.second.third", "", "1");
-    err |= check_get_resource("First: 1", "Second", "First", "1");
-    err |= check_get_resource("First.second: 1", "First.third", "first.second", "1");
-    err |= check_get_resource("First.second.third: 1", "First.third.third", "first.second.fourth", "1");
-    err |= check_get_resource("First*third*fifth: 1", "First.second.third.fourth.third.fifth", "", "1");
-    err |= check_get_resource("First: x\\\ny", "First", "", "xy");
-    err |= check_get_resource("! First: x", "First", "", NULL);
-    err |= check_get_resource("# First: x", "First", "", NULL);
+    err |= check_get_resource("First: 1", "First", "", "1", false);
+    err |= check_get_resource("First.second: 1", "First.second", "", "1", false);
+    err |= check_get_resource("?.second: 1", "First.second", "", "1", false);
+    err |= check_get_resource("First.?.third: 1", "First.second.third", "", "1", false);
+    err |= check_get_resource("First.?.?.fourth: 1", "First.second.third.fourth", "", "1", false);
+    err |= check_get_resource("*second: 1", "First.second", "", "1", false);
+    err |= check_get_resource("*third: 1", "First.second.third", "", "1", false);
+    err |= check_get_resource("First*second: 1", "First.second", "", "1", false);
+    err |= check_get_resource("First*third: 1", "First.second.third", "", "1", false);
+    err |= check_get_resource("First*fourth: 1", "First.second.third.fourth", "", "1", false);
+//  err |= check_get_resource("First*?.third: 1", "First.second.third", "", "1", false);
+    err |= check_get_resource("First: 1", "Second", "First", "1", false);
+    err |= check_get_resource("First.second: 1", "First.third", "first.second", "1", false);
+    err |= check_get_resource("First.second.third: 1", "First.third.third", "first.second.fourth", "1", false);
+    err |= check_get_resource("First*third*fifth: 1", "First.second.third.fourth.third.fifth", "", "1", false);
+    err |= check_get_resource("First: x\\\ny", "First", "", "xy", false);
+    err |= check_get_resource("! First: x", "First", "", NULL, false);
+    err |= check_get_resource("# First: x", "First", "", NULL, false);
     /* Matching among multiple entries */
     err |= check_get_resource(
             "First: 1\n"
             "Second: 2\n",
-            "First", "", "1");
+            "First", "", "1", false);
     err |= check_get_resource(
             "First: 1\n"
             "Second: 2\n",
-            "Second", "", "2");
+            "Second", "", "2", false);
 
     /* Precedence rules */
     /* Rule 1 */
     err |= check_get_resource(
             "First.second.third: 1\n"
             "First*third: 2\n",
-            "First.second.third", "", "1");
+            "First.second.third", "", "1", false);
     err |= check_get_resource(
             "First*third: 2\n"
             "First.second.third: 1\n",
-            "First.second.third", "", "1");
+            "First.second.third", "", "1", false);
     err |= check_get_resource(
             "First.second.third: 1\n"
             "First*third: 2\n",
-            "x.x.x", "First.second.third", "1");
+            "x.x.x", "First.second.third", "1", false);
     err |= check_get_resource(
             "First*third: 2\n"
             "First.second.third: 1\n",
-            "x.x.x", "First.second.third", "1");
+            "x.x.x", "First.second.third", "1", false);
 
     /* Rule 2 */
     err |= check_get_resource(
             "First.second: 1\n"
             "First.third: 2\n",
-            "First.second", "First.third", "1");
+            "First.second", "First.third", "1", false);
     err |= check_get_resource(
             "First.third: 2\n"
             "First.second: 1\n",
-            "First.second", "First.third", "1");
+            "First.second", "First.third", "1", false);
     err |= check_get_resource(
             "First.second.third: 1\n"
             "First.?.third: 2\n",
-            "First.second.third", "", "1");
+            "First.second.third", "", "1", false);
     err |= check_get_resource(
             "First.?.third: 2\n"
             "First.second.third: 1\n",
-            "First.second.third", "", "1");
+            "First.second.third", "", "1", false);
     err |= check_get_resource(
             "First.second.third: 1\n"
             "First.?.third: 2\n",
-            "x.x.x", "First.second.third", "1");
+            "x.x.x", "First.second.third", "1", false);
     err |= check_get_resource(
             "First.?.third: 2\n"
             "First.second.third: 1\n",
-            "x.x.x", "First.second.third", "1");
+            "x.x.x", "First.second.third", "1", false);
     /* Rule 3 */
     err |= check_get_resource(
             "First.second: 1\n"
             "First*second: 2\n",
-            "First.second", "", "1");
+            "First.second", "", "1", false);
     err |= check_get_resource(
             "First*second: 2\n"
             "First.second: 1\n",
-            "First.second", "", "1");
+            "First.second", "", "1", false);
 
     /* Some real world examples. May contain duplicates to the above tests. */
 
@@ -253,7 +258,7 @@ static int test_get_resource(void) {
             "xmh.toc*Command.activeForeground: black",
             "xmh.toc.messagefunctions.incorporate.activeForeground",
             "Xmh.Paned.Box.Command.Foreground",
-            "black");
+            "black", false);
 
     return err;
 }
@@ -288,17 +293,17 @@ static bool check_ints(const int expected, const int actual,
 }
 
 static void setup(void) {
-    int screennr;
-
-    conn = xcb_connect(NULL, &screennr);
-    if (conn == NULL || xcb_connection_has_error(conn)) {
+    display = XOpenDisplay(NULL);
+    if (display == NULL) {
         fprintf(stderr, "Failed to connect to X11 server.\n");
         exit(EXIT_FAILURE);
     }
 
-    screen = xcb_aux_get_screen(conn, screennr);
+    conn = XGetXCBConnection(display);
+
+    screen = xcb_aux_get_screen(conn, DefaultScreen(display));
     if (screen == NULL) {
-        fprintf(stderr, "Failed to query root screen.\n");
+        fprintf(stderr, "Failed to get screen.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -306,6 +311,8 @@ static void setup(void) {
         fprintf(stderr, "Failed to initialize context.\n");
         exit(EXIT_FAILURE);
     }
+
+    XrmInitialize();
 }
 
 static void cleanup(void) {
@@ -390,9 +397,26 @@ static int check_parse_entry_error(const char *str, const int result) {
     return check_ints(result, actual, "Wrong result code: <%d> / <%d>\n", result, actual);
 }
 
-static int check_get_resource(const char *database, const char *res_name, const char *res_class, const char *value) {
+static char *check_get_resource_xlib(const char *str_database, const char *res_name, const char *res_class) {
+    int res_code;
+    char *res_type;
+    XrmValue res_value;
+
+    XrmDatabase database = XrmGetStringDatabase(str_database);
+    res_code = XrmGetResource(database, res_name, res_class, &res_type, &res_value);
+
+    if (res_code) {
+        return (char *)res_value.addr;
+    } else {
+        return NULL;
+    }
+}
+
+static int check_get_resource(const char *database, const char *res_name, const char *res_class, const char *value,
+        bool expected_xlib_mismatch) {
     bool err = false;
     xcb_xrm_resource_t *resource;
+    char *xlib_value;
 
     fprintf(stderr, "== Assert that getting resource <%s> / <%s> returns <%s>\n",
             res_name, res_class, value);
@@ -404,11 +428,23 @@ static int check_get_resource(const char *database, const char *res_name, const 
             err = true;
         }
 
+        if (!expected_xlib_mismatch) {
+            xlib_value = check_get_resource_xlib(database, res_name, res_class);
+            err |= check_strings(NULL, xlib_value, "Returned NULL, but Xlib returned <%s>\n", xlib_value);
+        }
+
         goto done_get_resource;
     }
 
     err |= check_strings(value, xcb_xrm_resource_value(resource), "Expected <%s>, but got <%s>\n",
-            value, resource->value);
+            value, xcb_xrm_resource_value(resource));
+
+    if (!expected_xlib_mismatch) {
+        /* And for good measure, also compare it against Xlib. */
+        xlib_value = check_get_resource_xlib(database, res_name, res_class);
+        err |= check_strings(value, xlib_value, "Xlib returns <%s>, but expected <%s>\n",
+                xlib_value, value);
+    }
 
 done_get_resource:
     if (resource != NULL) {
