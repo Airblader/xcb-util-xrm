@@ -244,6 +244,12 @@ int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *_str) {
 
     for (char *line = strtok(str_continued, "\n"); line != NULL; line = strtok(NULL, "\n")) {
         xcb_xrm_entry_t *entry;
+
+        /* Ignore comments and directives. The specification guarantees that no
+         * whitespace is allowed before these characters. */
+        if (line[0] == '!' || line[0] == '#')
+            continue;
+
         if (xcb_xrm_entry_parse(line, &entry, false) == 0 && entry != NULL) {
             TAILQ_INSERT_TAIL(&(ctx->entries), entry, entries);
         }
