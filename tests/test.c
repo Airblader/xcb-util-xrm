@@ -174,7 +174,7 @@ static int test_get_resource(void) {
     err |= check_get_resource("First*second: 1", "First.second", "", "1", false);
     err |= check_get_resource("First*third: 1", "First.second.third", "", "1", false);
     err |= check_get_resource("First*fourth: 1", "First.second.third.fourth", "", "1", false);
-//  err |= check_get_resource("First*?.third: 1", "First.second.third", "", "1", false);
+    err |= check_get_resource("First*?.third: 1", "First.second.third", "", "1", false);
     err |= check_get_resource("First: 1", "Second", "First", "1", false);
     err |= check_get_resource("First.second: 1", "First.third", "first.second", "1", false);
     err |= check_get_resource("First.second.third: 1", "First.third.third", "first.second.fourth", "1", false);
