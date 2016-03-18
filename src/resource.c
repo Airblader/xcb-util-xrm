@@ -26,75 +26,17 @@
  * authorization from the authors.
  *
  */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <errno.h>
-#include <limits.h>
+#include "externals.h"
 
-#include <xcb/xcb.h>
-
-#include "xrm.h"
-#include "entry.h"
+#include "resource.h"
+#include "database.h"
 #include "match.h"
 #include "util.h"
-
-/* Forward declarations */
-static void xcb_xrm_database_free(xcb_xrm_context_t *ctx);
-
-/*
- * Create a new @ref xcb_xrm_context_t.
- *
- * @param conn A working XCB connection. The connection must be kept open until
- * after the context has been destroyed again.
- * @param screen The xcb_screen_t to use.
- * @param ctx A pointer to a xcb_xrm_context_t* which will be modified to
- * refer to the newly created context.
- * @return 0 on success, a negative error code otherwise.
- *
- * @ingroup xcb_xrm_context_t
- */
-int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_context_t **c) {
-    xcb_xrm_context_t *ctx = NULL;
-
-    *c = scalloc(1, sizeof(struct xcb_xrm_context_t));
-
-    ctx = *c;
-    ctx->conn = conn;
-    ctx->screen = screen;
-
-    TAILQ_INIT(&(ctx->entries));
-
-    return 0;
-}
-
-static void xcb_xrm_database_free(xcb_xrm_context_t *ctx) {
-    xcb_xrm_entry_t *entry;
-
-    FREE(ctx->resources);
-
-    while (!TAILQ_EMPTY(&(ctx->entries))) {
-        entry = TAILQ_FIRST(&(ctx->entries));
-        TAILQ_REMOVE(&(ctx->entries), entry, entries);
-        xcb_xrm_entry_free(entry);
-    }
-}
-
-/*
- * Destroys the @ref xcb_xrm_context_t.
- *
- * @param ctx The context to destroy.
- */
-void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
-    xcb_xrm_database_free(ctx);
-    FREE(ctx);
-}
 
 /*
  * Fetches a resource from the database.
  *
- * @param ctx The context to use.
+ * @param database The database to use.
  * @param res_name The fully qualified resource name.
  * @param res_class The fully qualified resource class. Note that this argument
  * may be left empty / NULL, but if given, it must contain the same number of
@@ -104,14 +46,14 @@ void xcb_xrm_context_free(xcb_xrm_context_t *ctx) {
  * caller.
  * @return 0 on success, a negative error code otherwise.
  */
-int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
+int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
                          xcb_xrm_resource_t **_resource) {
     xcb_xrm_resource_t *resource;
     xcb_xrm_entry_t *query_name = NULL;
     xcb_xrm_entry_t *query_class = NULL;
     int result = 0;
 
-    if (ctx->resources == NULL || TAILQ_EMPTY(&(ctx->entries))) {
+    if (database == NULL || TAILQ_EMPTY(database)) {
         *_resource = NULL;
         return -1;
     }
@@ -142,7 +84,7 @@ int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const cha
         goto done;
     }
 
-    result = xcb_xrm_match(ctx, query_name, query_class, resource);
+    result = xcb_xrm_match(database, query_name, query_class, resource);
 done:
     xcb_xrm_entry_free(query_name);
     xcb_xrm_entry_free(query_class);
@@ -156,7 +98,9 @@ done:
  * @returns The string value of the given resource.
  */
 char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
-    assert(resource != NULL);
+    if (resource == NULL)
+        return NULL;
+
     return resource->value;
 }
 
@@ -171,7 +115,8 @@ char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
  */
 int xcb_xrm_resource_value_int(xcb_xrm_resource_t *resource) {
     int converted;
-    assert(resource != NULL);
+    if (resource == NULL)
+        return INT_MIN;
 
     /* Let's first see if the value can be parsed into an integer directly. */
     if (str2int(&converted, resource->value, 10) == 0)
@@ -200,80 +145,9 @@ int xcb_xrm_resource_value_int(xcb_xrm_resource_t *resource) {
  * @param resource The resource to destroy.
  */
 void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
-    assert(resource != NULL);
+    if (resource == NULL)
+        return;
+
     FREE(resource->value);
     FREE(resource);
-}
-
-/*
- * Uses the given string as the database for this context.
- *
- * @param ctx The context to use.
- * @param str The resource string.
- * @return 0 on success, a negative error code otherwise.
- */
-int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *_str) {
-    char *str = sstrdup(_str);
-
-    int num_continuations = 0;
-    char *str_continued;
-    char *outwalk;
-
-    xcb_xrm_database_free(ctx);
-    ctx->resources = sstrdup(str);
-
-    /* Count the number of line continuations. */
-    for (char *walk = str; *walk != '\0'; walk++) {
-        if (*walk == '\\' && *(walk + 1) == '\n') {
-            num_continuations++;
-        }
-    }
-
-    /* Take care of line continuations. */
-    str_continued = scalloc(1, strlen(str) + 1 - 2 * num_continuations);
-    outwalk = str_continued;
-    for (char *walk = str; *walk != '\0'; walk++) {
-        if (*walk == '\\' && *(walk + 1) == '\n') {
-            walk++;
-            continue;
-        }
-
-        *(outwalk++) = *walk;
-    }
-    *outwalk = '\0';
-
-    for (char *line = strtok(str_continued, "\n"); line != NULL; line = strtok(NULL, "\n")) {
-        xcb_xrm_entry_t *entry;
-
-        /* Ignore comments and directives. The specification guarantees that no
-         * whitespace is allowed before these characters. */
-        if (line[0] == '!' || line[0] == '#')
-            continue;
-
-        if (xcb_xrm_entry_parse(line, &entry, false) == 0 && entry != NULL) {
-            TAILQ_INSERT_TAIL(&(ctx->entries), entry, entries);
-        }
-    }
-
-    FREE(str);
-    FREE(str_continued);
-    return SUCCESS;
-}
-
-/*
- * Loads the RESOURCE_MANAGER property and uses it as the database for this
- * context.
- *
- * @param ctx The context to use.
- * @return 0 on success, a negative error code otherwise.
- */
-int xcb_xrm_database_from_resource_manager(xcb_xrm_context_t *ctx) {
-    char *resources = xcb_util_get_property(ctx->conn, ctx->screen->root, XCB_ATOM_RESOURCE_MANAGER,
-            XCB_ATOM_STRING, 16 * 1024);
-    if (resources == NULL) {
-        return -FAILURE;
-    }
-
-    /* Parse the resource string. */
-    return xcb_xrm_database_from_string(ctx, resources);
 }

@@ -29,14 +29,14 @@
 #ifndef __XCB_XRM_H__
 #define __XCB_XRM_H__
 
-#include <xcb/xcb.h>
+#include "externals.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @defgroup xcb_xrm_context_t XCB XRM Functions
+ * @defgroup xcb_xrm_database_t XCB XRM Functions
  *
  * These functions are the xcb equivalent of the Xrm* function family in Xlib.
  * They allow the parsing and matching of X resources as well as some utility
@@ -54,23 +54,18 @@ extern "C" {
  *
  * xcb_screen_t *screen = xcb_aux_get_screen(conn, screennr);
  *
- * xcb_xrm_context_t *ctx;
- * if (xcb_xrm_context_new(conn, screen, &ctx) < 0)
- *     err(EXIT_FAILURE, "Could not initialize xcb-xrm.");
- *
- * if (xcb_xrm_database_from_resource_manager(ctx) < 0)
- *     err(EXIT_FAILURE, "Could not load the X resource database.");
+ * xcb_xrm_database_t *database = xcb_xrm_database_from_resource_manager(conn, screen);
  *
  * xcb_xrm_resource_t *resource;
- * if (xcb_xrm_resource_get(ctx, "Xft.dpi", "Xft.dpi", &resource) < 0) {
+ * if (xcb_xrm_resource_get(database, "Xft.dpi", "Xft.dpi", &resource) < 0) {
  *     // Resource not found in database
  *     value = NULL;
  * } else {
- *     value = xcb_xrm_resource_value(resource);
- *     xcb_xrm_resource_free(resource);
+ *     value = strdup(xcb_xrm_resource_value(resource));
  * }
  *
- * xcb_xrm_context_free(ctx);
+ * xcb_xrm_resource_free(resource);
+ * xcb_xrm_database_free(database);
  * xcb_disconnect(conn);
  * @endcode
  *
@@ -78,15 +73,16 @@ extern "C" {
  */
 
 /**
- * @struct xcb_xrm_context_t
- * Describes a context for using this library.
+ * @struct xcb_xrm_database_t
+ * Reference to a database.
  *
- * A context can be created using @ref xcb_xrm_context_new (). Afterwards, the
- * resource database must be loaded, e.g., with @ref
- * xcb_xrm_database_from_resource_manager (). After fetching resources, the
- * context must be destroyed by calling @ref xcb_xrm_context_free ().
+ * The database can be loaded in different ways, e.g., from the
+ * RESOURCE_MANAGER property by using @ref
+ * xcb_xrm_database_from_resource_manager (). All queries for a resource go
+ * against a specific database. A database must always be free'd by using @ref
+ * xcb_xrm_database_free ().
  */
-typedef struct xcb_xrm_context_t xcb_xrm_context_t;
+typedef struct xcb_xrm_database_t xcb_xrm_database_t;
 
 /**
  * @struct xcb_xrm_resource_t
@@ -101,48 +97,42 @@ typedef struct xcb_xrm_context_t xcb_xrm_context_t;
 typedef struct xcb_xrm_resource_t xcb_xrm_resource_t;
 
 /**
- * Create a new @ref xcb_xrm_context_t.
+ * Loads the RESOURCE_MANAGER property and creates a database with its
+ * contents. If the database could not be created, thie function will return
+ * NULL.
  *
- * @param conn A working XCB connection. The connection must be kept open until
- * after the context has been destroyed again.
- * @param screen The xcb_screen_t to use.
- * @param ctx A pointer to a xcb_xrm_context_t* which will be modified to
- * refer to the newly created context.
- * @return 0 on success, a negative error code otherwise.
+ * @param conn A working XCB connection.
+ * @param screen The xcb_screen_t* screen to use.
+ * @returns The database described by the RESOURCE_MANAGER property.
  *
- * @ingroup xcb_xrm_context_t
+ * @ingroup xcb_xrm_database_t
  */
-int xcb_xrm_context_new(xcb_connection_t *conn, xcb_screen_t *screen, xcb_xrm_context_t **ctx);
+xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *conn, xcb_screen_t *screen);
 
 /**
- * Destroys the @ref xcb_xrm_context_t.
+ * Creates a database from the given string.
+ * If the database could not be created, this function will return NULL.
  *
- * @param ctx The context to destroy.
- */
-void xcb_xrm_context_free(xcb_xrm_context_t *ctx);
-
-/**
- * Loads the RESOURCE_MANAGER property and uses it as the database for this
- * context.
- *
- * @param ctx The context to use.
- * @return 0 on success, a negative error code otherwise.
- */
-int xcb_xrm_database_from_resource_manager(xcb_xrm_context_t *ctx);
-
-/**
- * Uses the given string as the database for this context.
- *
- * @param ctx The context to use.
  * @param str The resource string.
- * @return 0 on success, a negative error code otherwise.
+ * @returns The database described by the resource string.
+ *
+ * @ingroup xcb_xrm_database_t
  */
-int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *str);
+xcb_xrm_database_t *xcb_xrm_database_from_string(const char *str);
+
+/**
+ * Destroys the given database.
+ *
+ * @param database The database to destroy.
+ *
+ * @ingroup xcb_xrm_database_t
+ */
+void xcb_xrm_database_free(xcb_xrm_database_t *database);
 
 /**
  * Fetches a resource from the database.
  *
- * @param ctx The context to use.
+ * @param database The database to use.
  * @param res_name The fully qualified resource name.
  * @param res_class The fully qualified resource class. Note that this argument
  * may be left empty / NULL, but if given, it must contain the same number of
@@ -152,7 +142,7 @@ int xcb_xrm_database_from_string(xcb_xrm_context_t *ctx, const char *str);
  * caller.
  * @return 0 on success, a negative error code otherwise.
  */
-int xcb_xrm_resource_get(xcb_xrm_context_t *ctx, const char *res_name, const char *res_class,
+int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
                          xcb_xrm_resource_t **resource);
 
 /**

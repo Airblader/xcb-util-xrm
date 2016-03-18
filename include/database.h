@@ -26,29 +26,14 @@
  * authorization from the authors.
  *
  */
-#ifndef __XRM_H__
-#define __XRM_H__
+#ifndef __DATABASE_H__
+#define __DATABASE_H__
 
-#include <sys/queue.h>
-#include <assert.h>
-#include <stdbool.h>
+#include "externals.h"
 
 #include "xcb_xrm.h"
-#include "util.h"
 #include "entry.h"
 
-struct xcb_xrm_context_t {
-    xcb_connection_t *conn;
-    xcb_screen_t *screen;
+TAILQ_HEAD(xcb_xrm_database_t, xcb_xrm_entry_t);
 
-    /* The unprocessed resource manager string. */
-    char *resources;
-
-    TAILQ_HEAD(database_head, xcb_xrm_entry_t) entries;
-};
-
-struct xcb_xrm_resource_t {
-    char *value;
-};
-
-#endif /* __XRM_H__ */
+#endif /* __DATABASE_H__ */

@@ -26,34 +26,20 @@
  * authorization from the authors.
  *
  */
-#ifndef __UTIL_H__
-#define __UTIL_H__
+#ifndef __EXTERNALS_H__
+#define __EXTERNALS_H__
 
-#include "externals.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include <ctype.h>
+#include <err.h>
+#include <errno.h>
+#include <limits.h>
+#include <math.h>
+#include <sys/queue.h>
 
-#define FREE(p)          \
-    do {                 \
-        if (p != NULL) { \
-            free(p);     \
-            p = NULL;    \
-        }                \
-    } while (0)
+#include <xcb/xcb.h>
 
-#undef MAX
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#undef MIN
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-
-#define SUCCESS 0
-#define FAILURE 1
-
-char *sstrdup(const char *str);
-
-void *scalloc(size_t num, size_t size);
-
-int str2int(int *out, char *input, int base);
-
-char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,
-        xcb_atom_t type, size_t size);
-
-#endif /* __UTIL_H__ */
+#endif /* __EXTERNALS_H__ */
