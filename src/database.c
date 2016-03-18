@@ -32,6 +32,9 @@
 #include "match.h"
 #include "util.h"
 
+/* Forward declarations */
+void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry);
+
 /*
  * Loads the RESOURCE_MANAGER property and creates a database with its
  * contents. If the database could not be created, thie function will return
@@ -102,8 +105,8 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
         if (line[0] == '!' || line[0] == '#')
             continue;
 
-        if (xcb_xrm_entry_parse(line, &entry, false) == 0 && entry != NULL) {
-            TAILQ_INSERT_TAIL(database, entry, entries);
+        if (xcb_xrm_entry_parse(line, &entry, false) == 0) {
+            xcb_xrm_database_put(database, entry);
         }
     }
 
@@ -131,4 +134,33 @@ void xcb_xrm_database_free(xcb_xrm_database_t *database) {
     }
 
     FREE(database);
+}
+
+void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry) {
+    xcb_xrm_entry_t *current;
+    xcb_xrm_entry_t *previous;
+
+    if (entry == NULL)
+        return;
+
+    /* Let's see whether this is a duplicate entry. */
+    current = TAILQ_FIRST(database);
+    while (current != NULL) {
+        previous = TAILQ_PREV(current, xcb_xrm_database_t, entries);
+
+        if (xcb_xrm_entry_compare(entry, current) == 0) {
+            TAILQ_REMOVE(database, current, entries);
+            xcb_xrm_entry_free(current);
+
+            current = previous;
+            if (current == NULL)
+                current = TAILQ_FIRST(database);
+        }
+
+        if (current == NULL)
+            break;
+        current = TAILQ_NEXT(current, entries);
+    }
+
+    TAILQ_INSERT_TAIL(database, entry, entries);
 }

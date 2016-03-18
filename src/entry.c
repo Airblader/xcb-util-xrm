@@ -265,6 +265,38 @@ int xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry) {
 }
 
 /*
+ * Compares the two entries.
+ * Returns 0 if they are the same and a negative error code otherwise.
+ *
+ */
+int xcb_xrm_entry_compare(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second) {
+    xcb_xrm_component_t *comp_first = TAILQ_FIRST(&(first->components));
+    xcb_xrm_component_t *comp_second = TAILQ_FIRST(&(second->components));
+
+    while (comp_first != NULL && comp_second != NULL) {
+        if (comp_first->type != comp_second->type)
+            return -FAILURE;
+
+        if (comp_first->binding_type != comp_second->binding_type)
+            return -FAILURE;
+
+        if (comp_first->type == CT_NORMAL && strcmp(comp_first->name, comp_second->name) != 0)
+            return -FAILURE;
+
+        comp_first = TAILQ_NEXT(comp_first, components);
+        comp_second = TAILQ_NEXT(comp_second, components);
+    }
+
+    /* At this point, at least one of the two is NULL. If they aren't both
+     * NULL, they have a different number of components and cannot be equal. */
+    if (comp_first != comp_second) {
+        return -FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+/*
  * Frees the given entry.
  *
  * @param entry The entry to be freed.

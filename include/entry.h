@@ -111,6 +111,13 @@ int xcb_xrm_entry_parse(const char *str, xcb_xrm_entry_t **entry, bool resource_
 int xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry);
 
 /**
+ * Compares the two entries.
+ * Returns 0 if they are the same and a negative error code otherwise.
+ *
+ */
+int xcb_xrm_entry_compare(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second);
+
+/**
  * Frees the given entry.
  *
  * @param entry The entry to be freed.
