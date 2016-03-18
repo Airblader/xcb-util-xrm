@@ -162,6 +162,18 @@ static int test_get_resource(void) {
     err |= check_get_resource("First*?.third: 1", "First.third", "", NULL, false);
     err |= check_get_resource("First: 1", "first", "", NULL, false);
     err |= check_get_resource("First: 1", "", "first", NULL, false);
+    /* Duplicate entries */
+    err |= check_get_resource(
+            "First: 1\n"
+            "First: 2\n"
+            "First: 3\n",
+            "First", "", "3", false);
+    err |= check_get_resource(
+            "First: 1\n"
+            "Second: 2\n"
+            "Second: 3\n"
+            "Third: 4\n",
+            "Second", "", "3", false);
 
     /* Basic matching */
     err |= check_get_resource("First: 1", "First", "", "1", false);
