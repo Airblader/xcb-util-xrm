@@ -29,7 +29,8 @@
 #ifndef __MATCH_H__
 #define __MATCH_H__
 
-#include "xrm.h"
+#include "database.h"
+#include "resource.h"
 #include "entry.h"
 
 /** Information about a matched component. */
@@ -61,7 +62,7 @@ typedef struct xcb_xrm_match_t {
  * Finds the matching entry in the database given a full name / class query string.
  *
  */
-int xcb_xrm_match(xcb_xrm_context_t *ctx, xcb_xrm_entry_t *query_name, xcb_xrm_entry_t *query_class,
+int xcb_xrm_match(xcb_xrm_database_t *database, xcb_xrm_entry_t *query_name, xcb_xrm_entry_t *query_class,
         xcb_xrm_resource_t *resource);
 
 #endif /* __MATCH_H__ */

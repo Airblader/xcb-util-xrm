@@ -32,7 +32,8 @@
 #include <X11/Xresource.h>
 #include <xcb/xcb_aux.h>
 
-#include "xrm.h"
+#include "database.h"
+#include "resource.h"
 
 #if defined(__GNUC__) && ((__GNUC__ * 100 + __GNUC_MINOR__) >= 203)
 #define ATTRIBUTE_PRINTF(x,y) __attribute__((__format__(__printf__,x,y)))
@@ -45,7 +46,6 @@
 static Display *display;
 static xcb_connection_t *conn;
 static xcb_screen_t *screen;
-static xcb_xrm_context_t *ctx;
 static bool check_parse_entry_resource_only;
 
 /* Test setup */
@@ -314,16 +314,10 @@ static void setup(void) {
         exit(EXIT_FAILURE);
     }
 
-    if (xcb_xrm_context_new(conn, screen, &ctx) < 0) {
-        fprintf(stderr, "Failed to initialize context.\n");
-        exit(EXIT_FAILURE);
-    }
-
     XrmInitialize();
 }
 
 static void cleanup(void) {
-    xcb_xrm_context_free(ctx);
     xcb_disconnect(conn);
 }
 
@@ -423,24 +417,26 @@ static char *check_get_resource_xlib(const char *str_database, const char *res_n
     return result;
 }
 
-static int check_get_resource(const char *database, const char *res_name, const char *res_class, const char *value,
+static int check_get_resource(const char *str_database, const char *res_name, const char *res_class, const char *value,
         bool expected_xlib_mismatch) {
-    bool err = false;
+    xcb_xrm_database_t *database;
     xcb_xrm_resource_t *resource;
+
+    bool err = false;
     char *xlib_value;
 
     fprintf(stderr, "== Assert that getting resource <%s> / <%s> returns <%s>\n",
             res_name, res_class, value);
 
-    xcb_xrm_database_from_string(ctx, database);
-    if (xcb_xrm_resource_get(ctx, res_name, res_class, &resource) < 0) {
+    database = xcb_xrm_database_from_string(str_database);
+    if (xcb_xrm_resource_get(database, res_name, res_class, &resource) < 0) {
         if (value != NULL) {
             fprintf(stderr, "xcb_xrm_resource_get() < 0\n");
             err = true;
         }
 
         if (!expected_xlib_mismatch) {
-            xlib_value = check_get_resource_xlib(database, res_name, res_class);
+            xlib_value = check_get_resource_xlib(str_database, res_name, res_class);
             err |= check_strings(NULL, xlib_value, "Returned NULL, but Xlib returned <%s>\n", xlib_value);
             if (xlib_value != NULL)
                 free(xlib_value);
@@ -454,7 +450,7 @@ static int check_get_resource(const char *database, const char *res_name, const 
 
     if (!expected_xlib_mismatch) {
         /* And for good measure, also compare it against Xlib. */
-        xlib_value = check_get_resource_xlib(database, res_name, res_class);
+        xlib_value = check_get_resource_xlib(str_database, res_name, res_class);
         err |= check_strings(value, xlib_value, "Xlib returns <%s>, but expected <%s>\n",
                 xlib_value, value);
         if (xlib_value != NULL)
@@ -466,5 +462,6 @@ done_get_resource:
         xcb_xrm_resource_free(resource);
     }
 
+    xcb_xrm_database_free(database);
     return err;
 }

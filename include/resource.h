@@ -26,34 +26,17 @@
  * authorization from the authors.
  *
  */
-#ifndef __UTIL_H__
-#define __UTIL_H__
+#ifndef __RESOURCE_H__
+#define __RESOURCE_H__
 
 #include "externals.h"
 
-#define FREE(p)          \
-    do {                 \
-        if (p != NULL) { \
-            free(p);     \
-            p = NULL;    \
-        }                \
-    } while (0)
+#include "xcb_xrm.h"
+#include "util.h"
+#include "entry.h"
 
-#undef MAX
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#undef MIN
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
+struct xcb_xrm_resource_t {
+    char *value;
+};
 
-#define SUCCESS 0
-#define FAILURE 1
-
-char *sstrdup(const char *str);
-
-void *scalloc(size_t num, size_t size);
-
-int str2int(int *out, char *input, int base);
-
-char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,
-        xcb_atom_t type, size_t size);
-
-#endif /* __UTIL_H__ */
+#endif /* __RESOURCE_H__ */

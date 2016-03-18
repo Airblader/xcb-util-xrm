@@ -26,11 +26,7 @@
  * authorization from the authors.
  *
  */
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/queue.h>
+#include "externals.h"
 
 #include "match.h"
 #include "util.h"
@@ -46,10 +42,10 @@ static void __match_free(xcb_xrm_match_t *match);
  * Finds the matching entry in the database given a full name / class query string.
  *
  */
-int xcb_xrm_match(xcb_xrm_context_t *ctx, xcb_xrm_entry_t *query_name, xcb_xrm_entry_t *query_class,
+int xcb_xrm_match(xcb_xrm_database_t *database, xcb_xrm_entry_t *query_name, xcb_xrm_entry_t *query_class,
         xcb_xrm_resource_t *resource) {
     xcb_xrm_match_t *best_match = NULL;
-    xcb_xrm_entry_t *cur_entry = TAILQ_FIRST(&(ctx->entries));
+    xcb_xrm_entry_t *cur_entry = TAILQ_FIRST(database);
 
     /* Let's figure out how many elements we need to store. */
     int num = xcb_xrm_entry_num_components(query_name);

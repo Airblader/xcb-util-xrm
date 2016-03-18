@@ -26,12 +26,7 @@
  * authorization from the authors.
  *
  */
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <ctype.h>
-#include <errno.h>
-#include <sys/queue.h>
+#include "externals.h"
 
 #include "entry.h"
 #include "util.h"
