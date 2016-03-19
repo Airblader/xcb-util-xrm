@@ -98,21 +98,92 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     TAILQ_INIT(database);
 
     for (char *line = strtok(str_continued, "\n"); line != NULL; line = strtok(NULL, "\n")) {
-        xcb_xrm_entry_t *entry;
-
-        /* Ignore comments and directives. The specification guarantees that no
-         * whitespace is allowed before these characters. */
-        if (line[0] == '!' || line[0] == '#')
-            continue;
-
-        if (xcb_xrm_entry_parse(line, &entry, false) == 0) {
-            xcb_xrm_database_put(database, entry);
-        }
+        xcb_xrm_database_put_resource_line(database, line);
     }
 
     FREE(str);
     FREE(str_continued);
     return database;
+}
+
+/*
+ * Inserts a new resource into the database.
+ * If the resource already exists, the current value will be replaced.
+ *
+ * Note that this is not the equivalent of @ref
+ * xcb_xrm_database_put_resource_line when concatenating the resource name and
+ * value with a colon. For example, if the value starts with a leading space,
+ * this must (and will) be replaced with the special '\ ' sequence.
+ *
+ * @param database The database to modify.
+ * @param resource The fully qualified or partial resource specifier.
+ * @param value The value of the resource.
+ */
+void xcb_xrm_database_put_resource(xcb_xrm_database_t *database, const char *resource, const char *value) {
+    int new_size = strlen(value) + 1;
+    char *copy;
+    char *escaped;
+    char *outwalk;
+    char *line;
+
+    /* Before inserting the value into the database, we need to take care of
+     * magic values. We only replace a space/tab if it's the first character
+     * (and only the first occurence) since all subsequent ones will just work.
+     */
+
+    /* First, let's figure out our buffer size. */
+    copy = sstrdup(value);
+    if (copy[0] == ' ' || copy[0] == '\t')
+        new_size++;
+    for (char *walk = copy; *walk != '\0'; walk++) {
+        if (*walk == '\n' || *walk == '\\')
+            new_size++;
+    }
+
+    /* Now we write the new value. */
+    escaped = scalloc(1, new_size);
+    outwalk = escaped;
+    if (copy[0] == ' ' || copy[0] == '\t') {
+        *(outwalk++) = '\\';
+    }
+    for (char *walk = copy; *walk != '\0'; walk++) {
+        if (*walk == '\n') {
+            *(outwalk++) = '\\';
+            *(outwalk++) = 'n';
+        } else if (*walk == '\\') {
+            *(outwalk++) = '\\';
+            *(outwalk++) = '\\';
+        } else {
+            *(outwalk++) = *walk;
+        }
+    }
+    *outwalk = '\0';
+    FREE(copy);
+
+    sasprintf(&line, "%s: %s", resource, escaped);
+    FREE(escaped);
+    xcb_xrm_database_put_resource_line(database, line);
+    FREE(line);
+}
+
+/*
+ * Inserts a new resource into the database.
+ * If the resource already exists, the current value will be replaced.
+ *
+ * @param database The database to modify.
+ * @param line The complete resource specification to insert.
+ */
+void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char *line) {
+    xcb_xrm_entry_t *entry;
+
+    /* Ignore comments and directives. The specification guarantees that no
+     * whitespace is allowed before these characters. */
+    if (line[0] == '!' || line[0] == '#')
+        return;
+
+    if (xcb_xrm_entry_parse(line, &entry, false) == 0) {
+        xcb_xrm_database_put(database, entry);
+    }
 }
 
 /**

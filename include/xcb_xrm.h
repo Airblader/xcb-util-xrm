@@ -121,6 +121,30 @@ xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *con
 xcb_xrm_database_t *xcb_xrm_database_from_string(const char *str);
 
 /**
+ * Inserts a new resource into the database.
+ * If the resource already exists, the current value will be replaced.
+ *
+ * Note that this is not the equivalent of @ref
+ * xcb_xrm_database_put_resource_line when concatenating the resource name and
+ * value with a colon. For example, if the value starts with a leading space,
+ * this must (and will) be replaced with the special '\ ' sequence.
+ *
+ * @param database The database to modify.
+ * @param resource The fully qualified or partial resource specifier.
+ * @param value The value of the resource.
+ */
+void xcb_xrm_database_put_resource(xcb_xrm_database_t *database, const char *resource, const char *value);
+
+/**
+ * Inserts a new resource into the database.
+ * If the resource already exists, the current value will be replaced.
+ *
+ * @param database The database to modify.
+ * @param line The complete resource specification to insert.
+ */
+void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char *line);
+
+/**
  * Destroys the given database.
  *
  * @param database The database to destroy.

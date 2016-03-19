@@ -31,6 +31,12 @@
 
 #include "externals.h"
 
+#if defined(__GNUC__) && ((__GNUC__ * 100 + __GNUC_MINOR__) >= 203)
+#define ATTRIBUTE_PRINTF(x,y) __attribute__((__format__(__printf__,x,y)))
+#else
+#define ATTRIBUTE_PRINTF(x,y)
+#endif
+
 #define FREE(p)          \
     do {                 \
         if (p != NULL) { \
@@ -50,6 +56,8 @@
 char *sstrdup(const char *str);
 
 void *scalloc(size_t num, size_t size);
+
+int sasprintf(char **strp, const char *fmt, ...) ATTRIBUTE_PRINTF(2, 3);
 
 int str2int(int *out, char *input, int base);
 

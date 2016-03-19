@@ -48,6 +48,17 @@ void *scalloc(size_t num, size_t size) {
     return result;
 }
 
+int sasprintf(char **strp, const char *fmt, ...) {
+    va_list args;
+    int result;
+
+    va_start(args, fmt);
+    if ((result = vasprintf(strp, fmt, args)) == -1)
+        err(EXIT_FAILURE, "asprintf(%s)", fmt);
+    va_end(args);
+    return result;
+}
+
 int str2int(int *out, char *input, int base) {
     char *end;
     long result;
