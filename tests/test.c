@@ -116,6 +116,7 @@ static int test_entry_parser(void) {
     err |= check_parse_entry("First: \t x \t", "x \t", ".", 1, "First");
     /* Special characters */
     err |= check_parse_entry("First: \\ x", " x", ".", 1, "First");
+    err |= check_parse_entry("First: x\\ x", "x x", ".", 1, "First");
     err |= check_parse_entry("First: \\\tx", "\tx", ".", 1, "First");
     err |= check_parse_entry("First: \\011x", "\tx", ".", 1, "First");
     err |= check_parse_entry("First: x\\\\x", "x\\x", ".", 1, "First");
