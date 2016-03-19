@@ -126,6 +126,10 @@ void xcb_xrm_database_put_resource(xcb_xrm_database_t *database, const char *res
     char *outwalk;
     char *line;
 
+    assert(database != NULL);
+    assert(resource != NULL);
+    assert(value != NULL);
+
     /* Before inserting the value into the database, we need to take care of
      * magic values. We only replace a space/tab if it's the first character
      * (and only the first occurence) since all subsequent ones will just work.
@@ -175,6 +179,9 @@ void xcb_xrm_database_put_resource(xcb_xrm_database_t *database, const char *res
  */
 void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char *line) {
     xcb_xrm_entry_t *entry;
+
+    assert(database != NULL);
+    assert(line != NULL);
 
     /* Ignore comments and directives. The specification guarantees that no
      * whitespace is allowed before these characters. */
