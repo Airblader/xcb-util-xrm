@@ -33,7 +33,7 @@
 #include "util.h"
 
 /* Forward declarations */
-void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry);
+void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override);
 
 /*
  * Loads the RESOURCE_MANAGER property and creates a database with its
@@ -129,6 +129,33 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
 }
 
 /*
+ * Combines two databases.
+ * The entries from the source database are stored in the target database. If
+ * the same specifier already exists in the target database, the value will be
+ * overridden if override is set; otherwise, the value is discarded.
+ * The source database will implicitly be free'd and must not be used
+ * afterwards.
+ *
+ * @param source_db Source database.
+ * @param target_db Target database.
+ * @param override If true, entries from the source database override entries
+ * in the target database using the same resource specifier.
+ */
+void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t *target_db, bool override) {
+    xcb_xrm_entry_t *entry;
+
+    assert(source_db != NULL);
+    assert(target_db != NULL);
+    while (!TAILQ_EMPTY(source_db)) {
+        entry = TAILQ_FIRST(source_db);
+        TAILQ_REMOVE(source_db, entry, entries);
+        xcb_xrm_database_put(target_db, entry, override);
+    }
+
+    xcb_xrm_database_free(source_db);
+}
+
+/*
  * Inserts a new resource into the database.
  * If the resource already exists, the current value will be replaced.
  *
@@ -175,7 +202,9 @@ void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char
         return;
 
     if (xcb_xrm_entry_parse(line, &entry, false) == 0) {
-        xcb_xrm_database_put(database, entry);
+        xcb_xrm_database_put(database, entry, true);
+    } else {
+        xcb_xrm_entry_free(entry);
     }
 }
 
@@ -200,7 +229,7 @@ void xcb_xrm_database_free(xcb_xrm_database_t *database) {
     FREE(database);
 }
 
-void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry) {
+void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override) {
     xcb_xrm_entry_t *current;
     xcb_xrm_entry_t *previous;
 
@@ -213,6 +242,11 @@ void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry) 
         previous = TAILQ_PREV(current, xcb_xrm_database_t, entries);
 
         if (xcb_xrm_entry_compare(entry, current) == 0) {
+            if (!override) {
+                xcb_xrm_entry_free(entry);
+                return;
+            }
+
             TAILQ_REMOVE(database, current, entries);
             xcb_xrm_entry_free(current);
 
