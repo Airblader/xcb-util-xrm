@@ -98,21 +98,85 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     TAILQ_INIT(database);
 
     for (char *line = strtok(str_continued, "\n"); line != NULL; line = strtok(NULL, "\n")) {
-        xcb_xrm_entry_t *entry;
-
-        /* Ignore comments and directives. The specification guarantees that no
-         * whitespace is allowed before these characters. */
-        if (line[0] == '!' || line[0] == '#')
-            continue;
-
-        if (xcb_xrm_entry_parse(line, &entry, false) == 0) {
-            xcb_xrm_database_put(database, entry);
-        }
+        xcb_xrm_database_put_resource_line(database, line);
     }
 
     FREE(str);
     FREE(str_continued);
     return database;
+}
+
+/*
+ * Returns a string representation of a database.
+ *
+ * @param database The database to return in string format.
+ * @returns A string representation of the specified database.
+ */
+char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
+    char *result = NULL;
+
+    xcb_xrm_entry_t *entry;
+    TAILQ_FOREACH(entry, database, entries) {
+        char *entry_str = xcb_xrm_entry_to_string(entry);
+        char *tmp;
+        sasprintf(&tmp, "%s%s\n", result == NULL ? "" : result, entry_str);
+        FREE(entry_str);
+        FREE(result);
+        result = tmp;
+    }
+
+    return result;
+}
+
+/*
+ * Inserts a new resource into the database.
+ * If the resource already exists, the current value will be replaced.
+ *
+ * Note that this is not the equivalent of @ref
+ * xcb_xrm_database_put_resource_line when concatenating the resource name and
+ * value with a colon. For example, if the value starts with a leading space,
+ * this must (and will) be replaced with the special '\ ' sequence.
+ *
+ * @param database The database to modify.
+ * @param resource The fully qualified or partial resource specifier.
+ * @param value The value of the resource.
+ */
+void xcb_xrm_database_put_resource(xcb_xrm_database_t *database, const char *resource, const char *value) {
+    char *escaped;
+    char *line;
+
+    assert(database != NULL);
+    assert(resource != NULL);
+    assert(value != NULL);
+
+    escaped = xcb_xrm_entry_escape_value(value);
+    sasprintf(&line, "%s: %s", resource, escaped);
+    FREE(escaped);
+    xcb_xrm_database_put_resource_line(database, line);
+    FREE(line);
+}
+
+/*
+ * Inserts a new resource into the database.
+ * If the resource already exists, the current value will be replaced.
+ *
+ * @param database The database to modify.
+ * @param line The complete resource specification to insert.
+ */
+void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char *line) {
+    xcb_xrm_entry_t *entry;
+
+    assert(database != NULL);
+    assert(line != NULL);
+
+    /* Ignore comments and directives. The specification guarantees that no
+     * whitespace is allowed before these characters. */
+    if (line[0] == '!' || line[0] == '#')
+        return;
+
+    if (xcb_xrm_entry_parse(line, &entry, false) == 0) {
+        xcb_xrm_database_put(database, entry);
+    }
 }
 
 /**

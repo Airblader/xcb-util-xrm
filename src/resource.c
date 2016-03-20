@@ -61,7 +61,7 @@ int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, con
     *_resource = scalloc(1, sizeof(struct xcb_xrm_resource_t));
     resource = *_resource;
 
-    if (xcb_xrm_entry_parse(res_name, &query_name, true) < 0) {
+    if (res_name == NULL || xcb_xrm_entry_parse(res_name, &query_name, true) < 0) {
         result = -1;
         goto done;
     }
