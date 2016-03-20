@@ -56,6 +56,7 @@ static void cleanup(void);
 static int test_entry_parser(void);
 static int test_get_resource(void);
 static int test_put_resource(void);
+static int test_combine_databases(void);
 
 /* Assertion utilities */
 static bool check_strings(const char *expected, const char *actual,
@@ -78,6 +79,7 @@ int main(void) {
     err |= test_entry_parser();
     err |= test_get_resource();
     err |= test_put_resource();
+    err |= test_combine_databases();
     cleanup();
 
     return err;
@@ -324,6 +326,47 @@ static int test_put_resource(void) {
             "*Fifth.sixth*seventh.?.eigth*?*last: xyz\n");
 
     xcb_xrm_database_free(database);
+    return err;
+}
+
+static int test_combine_databases(void) {
+    bool err = false;
+
+    xcb_xrm_database_t *source_db;
+    xcb_xrm_database_t *target_db;
+
+    source_db = xcb_xrm_database_from_string(
+            "a1.b1*c1: 1\n"
+            "a2.b2: 2\n"
+            "a3: 3\n");
+    target_db = xcb_xrm_database_from_string(
+            "a3: 0\n"
+            "a1.b1*c1: 0\n"
+            "a4.?.b4: 0\n");
+    xcb_xrm_database_combine(source_db, target_db, false);
+    err |= check_database(target_db,
+            "a3: 0\n"
+            "a1.b1*c1: 0\n"
+            "a4.?.b4: 0\n"
+            "a2.b2: 2\n");
+    xcb_xrm_database_free(target_db);
+
+    source_db = xcb_xrm_database_from_string(
+            "a1.b1*c1: 1\n"
+            "a2.b2: 2\n"
+            "a3: 3\n");
+    target_db = xcb_xrm_database_from_string(
+            "a3: 0\n"
+            "a1.b1*c1: 0\n"
+            "a4.?.b4: 0\n");
+    xcb_xrm_database_combine(source_db, target_db, true);
+    err |= check_database(target_db,
+            "a4.?.b4: 0\n"
+            "a1.b1*c1: 1\n"
+            "a2.b2: 2\n"
+            "a3: 3\n");
+    xcb_xrm_database_free(target_db);
+
     return err;
 }
 
