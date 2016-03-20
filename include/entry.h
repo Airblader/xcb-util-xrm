@@ -118,6 +118,18 @@ int xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry);
 int xcb_xrm_entry_compare(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second);
 
 /**
+ * Returns a string representation of this entry.
+ *
+ */
+char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry);
+
+/**
+ * Escapes magic values.
+ *
+ */
+char *xcb_xrm_entry_escape_value(const char *value);
+
+/**
  * Frees the given entry.
  *
  * @param entry The entry to be freed.

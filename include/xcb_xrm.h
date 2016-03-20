@@ -121,6 +121,14 @@ xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *con
 xcb_xrm_database_t *xcb_xrm_database_from_string(const char *str);
 
 /**
+ * Returns a string representation of a database.
+ *
+ * @param database The database to return in string format.
+ * @returns A string representation of the specified database.
+ */
+char *xcb_xrm_database_to_string(xcb_xrm_database_t *database);
+
+/**
  * Inserts a new resource into the database.
  * If the resource already exists, the current value will be replaced.
  *

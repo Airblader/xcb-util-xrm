@@ -107,6 +107,28 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
 }
 
 /*
+ * Returns a string representation of a database.
+ *
+ * @param database The database to return in string format.
+ * @returns A string representation of the specified database.
+ */
+char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
+    char *result = NULL;
+
+    xcb_xrm_entry_t *entry;
+    TAILQ_FOREACH(entry, database, entries) {
+        char *entry_str = xcb_xrm_entry_to_string(entry);
+        char *tmp;
+        sasprintf(&tmp, "%s%s\n", result == NULL ? "" : result, entry_str);
+        FREE(entry_str);
+        FREE(result);
+        result = tmp;
+    }
+
+    return result;
+}
+
+/*
  * Inserts a new resource into the database.
  * If the resource already exists, the current value will be replaced.
  *
@@ -120,50 +142,14 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
  * @param value The value of the resource.
  */
 void xcb_xrm_database_put_resource(xcb_xrm_database_t *database, const char *resource, const char *value) {
-    int new_size = strlen(value) + 1;
-    char *copy;
     char *escaped;
-    char *outwalk;
     char *line;
 
     assert(database != NULL);
     assert(resource != NULL);
     assert(value != NULL);
 
-    /* Before inserting the value into the database, we need to take care of
-     * magic values. We only replace a space/tab if it's the first character
-     * (and only the first occurence) since all subsequent ones will just work.
-     */
-
-    /* First, let's figure out our buffer size. */
-    copy = sstrdup(value);
-    if (copy[0] == ' ' || copy[0] == '\t')
-        new_size++;
-    for (char *walk = copy; *walk != '\0'; walk++) {
-        if (*walk == '\n' || *walk == '\\')
-            new_size++;
-    }
-
-    /* Now we write the new value. */
-    escaped = scalloc(1, new_size);
-    outwalk = escaped;
-    if (copy[0] == ' ' || copy[0] == '\t') {
-        *(outwalk++) = '\\';
-    }
-    for (char *walk = copy; *walk != '\0'; walk++) {
-        if (*walk == '\n') {
-            *(outwalk++) = '\\';
-            *(outwalk++) = 'n';
-        } else if (*walk == '\\') {
-            *(outwalk++) = '\\';
-            *(outwalk++) = '\\';
-        } else {
-            *(outwalk++) = *walk;
-        }
-    }
-    *outwalk = '\0';
-    FREE(copy);
-
+    escaped = xcb_xrm_entry_escape_value(value);
     sasprintf(&line, "%s: %s", resource, escaped);
     FREE(escaped);
     xcb_xrm_database_put_resource_line(database, line);

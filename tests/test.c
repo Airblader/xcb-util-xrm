@@ -55,6 +55,7 @@ static void cleanup(void);
 /* Tests */
 static int test_entry_parser(void);
 static int test_get_resource(void);
+static int test_put_resource(void);
 
 /* Assertion utilities */
 static bool check_strings(const char *expected, const char *actual,
@@ -68,6 +69,7 @@ static int check_parse_entry_error(const char *str, const int result);
 static char *check_get_resource_xlib(const char *str_database, const char *res_name, const char *res_class);
 static int check_get_resource(const char *database, const char *res_name, const char *res_class, const char *value,
         bool expected_xlib_mismatch);
+static int check_database(xcb_xrm_database_t *database, const char *expected);
 
 int main(void) {
     bool err = false;
@@ -75,6 +77,7 @@ int main(void) {
     setup();
     err |= test_entry_parser();
     err |= test_get_resource();
+    err |= test_put_resource();
     cleanup();
 
     return err;
@@ -283,6 +286,47 @@ static int test_get_resource(void) {
     return err;
 }
 
+static int test_put_resource(void) {
+    bool err = false;
+
+    xcb_xrm_database_t *database;
+    database = xcb_xrm_database_from_string("");
+
+    xcb_xrm_database_put_resource(database, "First", "1");
+    xcb_xrm_database_put_resource(database, "First*second", "2");
+    xcb_xrm_database_put_resource(database, "Third", "  a\\ b\nc d\te ");
+    xcb_xrm_database_put_resource(database, "Fourth", "\t\ta\\ b\nc d\te ");
+    err |= check_database(database,
+            "First: 1\n"
+            "First*second: 2\n"
+            "Third: \\  a\\\\ b\\nc d\te \n"
+            "Fourth: \\\t\ta\\\\ b\\nc d\te \n");
+
+    xcb_xrm_database_put_resource(database, "First", "3");
+    xcb_xrm_database_put_resource(database, "First*second", "4");
+    xcb_xrm_database_put_resource(database, "Third", "x");
+    xcb_xrm_database_put_resource(database, "Fourth", "x");
+    err |= check_database(database,
+            "First: 3\n"
+            "First*second: 4\n"
+            "Third: x\n"
+            "Fourth: x\n");
+
+    xcb_xrm_database_put_resource_line(database, "Second:xyz");
+    xcb_xrm_database_put_resource_line(database, "Third:  xyz");
+    xcb_xrm_database_put_resource_line(database, "*Fifth.sixth*seventh.?.eigth*?*last: xyz");
+    err |= check_database(database,
+            "First: 3\n"
+            "First*second: 4\n"
+            "Fourth: x\n"
+            "Second: xyz\n"
+            "Third: xyz\n"
+            "*Fifth.sixth*seventh.?.eigth*?*last: xyz\n");
+
+    xcb_xrm_database_free(database);
+    return err;
+}
+
 static bool check_strings(const char *expected, const char *actual,
         const char *format, ...) {
     va_list ap;
@@ -476,5 +520,15 @@ done_get_resource:
     }
 
     xcb_xrm_database_free(database);
+    return err;
+}
+
+static int check_database(xcb_xrm_database_t *database, const char *expected) {
+    bool err = false;
+    char *actual = xcb_xrm_database_to_string(database);
+
+    err |= check_strings(expected, actual, "Expected database <%s>, but found <%s>\n", expected, actual);
+
+    FREE(actual);
     return err;
 }
