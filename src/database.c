@@ -142,12 +142,11 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
  * in the target database using the same resource specifier.
  */
 void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t *target_db, bool override) {
-    xcb_xrm_entry_t *entry;
-
     assert(source_db != NULL);
     assert(target_db != NULL);
+
     while (!TAILQ_EMPTY(source_db)) {
-        entry = TAILQ_FIRST(source_db);
+        xcb_xrm_entry_t *entry = TAILQ_FIRST(source_db);
         TAILQ_REMOVE(source_db, entry, entries);
         xcb_xrm_database_put(target_db, entry, override);
     }
@@ -216,12 +215,11 @@ void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char
  * @ingroup xcb_xrm_database_t
  */
 void xcb_xrm_database_free(xcb_xrm_database_t *database) {
-    xcb_xrm_entry_t *entry;
     if (database == NULL)
         return;
 
     while (!TAILQ_EMPTY(database)) {
-        entry = TAILQ_FIRST(database);
+        xcb_xrm_entry_t *entry = TAILQ_FIRST(database);
         TAILQ_REMOVE(database, entry, entries);
         xcb_xrm_entry_free(entry);
     }
@@ -231,7 +229,6 @@ void xcb_xrm_database_free(xcb_xrm_database_t *database) {
 
 void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override) {
     xcb_xrm_entry_t *current;
-    xcb_xrm_entry_t *previous;
 
     if (entry == NULL)
         return;
@@ -239,7 +236,7 @@ void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, 
     /* Let's see whether this is a duplicate entry. */
     current = TAILQ_FIRST(database);
     while (current != NULL) {
-        previous = TAILQ_PREV(current, xcb_xrm_database_t, entries);
+        xcb_xrm_entry_t *previous = TAILQ_PREV(current, xcb_xrm_database_t, entries);
 
         if (xcb_xrm_entry_compare(entry, current) == 0) {
             if (!override) {

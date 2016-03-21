@@ -53,9 +53,7 @@ static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_sta
  */
 static void xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
         xcb_xrm_binding_type_t binding_type, const char *str) {
-    xcb_xrm_component_t *new;
-
-    new = scalloc(1, sizeof(struct xcb_xrm_component_t));
+    xcb_xrm_component_t *new = scalloc(1, sizeof(struct xcb_xrm_component_t));
 
     if (str != NULL) {
         new->name = sstrdup(str);
@@ -94,8 +92,8 @@ static void xcb_xrm_finalize_component(xcb_xrm_entry_t *entry, xcb_xrm_entry_par
  *
  */
 int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resource_only) {
+    // TODO XXX Allow arbitrary sizes.
     char *str;
-    char *walk;
     xcb_xrm_entry_t *entry = NULL;
     xcb_xrm_component_t *last;
     char value_buf[4096];
@@ -114,7 +112,7 @@ int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resourc
     entry = *_entry;
     TAILQ_INIT(&(entry->components));
 
-    for (walk = str; *walk != '\0'; walk++) {
+    for (char *walk = str; *walk != '\0'; walk++) {
         switch (*walk) {
             case '.':
             case '*':
@@ -377,13 +375,12 @@ char *xcb_xrm_entry_escape_value(const char *value) {
  *
  */
 void xcb_xrm_entry_free(xcb_xrm_entry_t *entry) {
-    xcb_xrm_component_t *component;
     if (entry == NULL)
         return;
 
     FREE(entry->value);
     while (!TAILQ_EMPTY(&(entry->components))) {
-        component = TAILQ_FIRST(&(entry->components));
+        xcb_xrm_component_t *component = TAILQ_FIRST(&(entry->components));
         FREE(component->name);
         TAILQ_REMOVE(&(entry->components), component, components);
         FREE(component);
