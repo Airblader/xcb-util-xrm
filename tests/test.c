@@ -291,32 +291,30 @@ static int test_get_resource(void) {
 static int test_put_resource(void) {
     bool err = false;
 
-    xcb_xrm_database_t *database;
-    database = xcb_xrm_database_from_string("");
-
-    xcb_xrm_database_put_resource(database, "First", "1");
-    xcb_xrm_database_put_resource(database, "First*second", "2");
-    xcb_xrm_database_put_resource(database, "Third", "  a\\ b\nc d\te ");
-    xcb_xrm_database_put_resource(database, "Fourth", "\t\ta\\ b\nc d\te ");
+    xcb_xrm_database_t *database = NULL;
+    xcb_xrm_database_put_resource(&database, "First", "1");
+    xcb_xrm_database_put_resource(&database, "First*second", "2");
+    xcb_xrm_database_put_resource(&database, "Third", "  a\\ b\nc d\te ");
+    xcb_xrm_database_put_resource(&database, "Fourth", "\t\ta\\ b\nc d\te ");
     err |= check_database(database,
             "First: 1\n"
             "First*second: 2\n"
             "Third: \\  a\\\\ b\\nc d\te \n"
             "Fourth: \\\t\ta\\\\ b\\nc d\te \n");
 
-    xcb_xrm_database_put_resource(database, "First", "3");
-    xcb_xrm_database_put_resource(database, "First*second", "4");
-    xcb_xrm_database_put_resource(database, "Third", "x");
-    xcb_xrm_database_put_resource(database, "Fourth", "x");
+    xcb_xrm_database_put_resource(&database, "First", "3");
+    xcb_xrm_database_put_resource(&database, "First*second", "4");
+    xcb_xrm_database_put_resource(&database, "Third", "x");
+    xcb_xrm_database_put_resource(&database, "Fourth", "x");
     err |= check_database(database,
             "First: 3\n"
             "First*second: 4\n"
             "Third: x\n"
             "Fourth: x\n");
 
-    xcb_xrm_database_put_resource_line(database, "Second:xyz");
-    xcb_xrm_database_put_resource_line(database, "Third:  xyz");
-    xcb_xrm_database_put_resource_line(database, "*Fifth.sixth*seventh.?.eigth*?*last: xyz");
+    xcb_xrm_database_put_resource_line(&database, "Second:xyz");
+    xcb_xrm_database_put_resource_line(&database, "Third:  xyz");
+    xcb_xrm_database_put_resource_line(&database, "*Fifth.sixth*seventh.?.eigth*?*last: xyz");
     err |= check_database(database,
             "First: 3\n"
             "First*second: 4\n"
@@ -343,7 +341,7 @@ static int test_combine_databases(void) {
             "a3: 0\n"
             "a1.b1*c1: 0\n"
             "a4.?.b4: 0\n");
-    xcb_xrm_database_combine(source_db, target_db, false);
+    xcb_xrm_database_combine(source_db, &target_db, false);
     err |= check_database(target_db,
             "a3: 0\n"
             "a1.b1*c1: 0\n"
@@ -359,7 +357,7 @@ static int test_combine_databases(void) {
             "a3: 0\n"
             "a1.b1*c1: 0\n"
             "a4.?.b4: 0\n");
-    xcb_xrm_database_combine(source_db, target_db, true);
+    xcb_xrm_database_combine(source_db, &target_db, true);
     err |= check_database(target_db,
             "a4.?.b4: 0\n"
             "a1.b1*c1: 1\n"

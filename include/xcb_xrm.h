@@ -135,17 +135,21 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database);
  * overridden if override is set; otherwise, the value is discarded.
  * The source database will implicitly be free'd and must not be used
  * afterwards.
+ * If NULL is passed for target_db, a new and empty database will be created
+ * and returned in the pointer.
  *
  * @param source_db Source database.
  * @param target_db Target database.
  * @param override If true, entries from the source database override entries
  * in the target database using the same resource specifier.
  */
-void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t *target_db, bool override);
+void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t **target_db, bool override);
 
 /**
  * Inserts a new resource into the database.
  * If the resource already exists, the current value will be replaced.
+ * If NULL is passed for database, a new and empty database will be created and
+ * returned in the pointer.
  *
  * Note that this is not the equivalent of @ref
  * xcb_xrm_database_put_resource_line when concatenating the resource name and
@@ -156,16 +160,18 @@ void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t 
  * @param resource The fully qualified or partial resource specifier.
  * @param value The value of the resource.
  */
-void xcb_xrm_database_put_resource(xcb_xrm_database_t *database, const char *resource, const char *value);
+void xcb_xrm_database_put_resource(xcb_xrm_database_t **database, const char *resource, const char *value);
 
 /**
  * Inserts a new resource into the database.
  * If the resource already exists, the current value will be replaced.
+ * If NULL is passed for database, a new and empty database will be created and
+ * returned in the pointer.
  *
  * @param database The database to modify.
  * @param line The complete resource specification to insert.
  */
-void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char *line);
+void xcb_xrm_database_put_resource_line(xcb_xrm_database_t **database, const char *line);
 
 /**
  * Destroys the given database.
