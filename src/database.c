@@ -116,14 +116,17 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
                     line[i++] == 'd' &&
                     line[i++] == 'e') {
                 xcb_xrm_database_t *included;
+                int j = strlen(line) - 1;
 
                 /* Skip whitespace */
-                while (line[i] == ' ' || line[i] == '\t')
+                while (line[i] == ' ' || line[i] == '\t' || line[i] == '"')
                     i++;
+                while (line[j] == ' ' || line[j] == '\t' || line[j] == '"')
+                    j--;
 
-                char *filename = scalloc(1, strlen(line) - i + 1);
-                memcpy(filename, &line[i], strlen(line) - i);
-                filename[strlen(line) - i] = '\0';
+                char *filename = scalloc(1, j - i + 2);
+                memcpy(filename, &line[i], j - i + 1);
+                filename[j - 1 + 1] = '\0';
 
                 // TODO XXX Filename globbing
 
