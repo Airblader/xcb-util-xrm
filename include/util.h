@@ -61,6 +61,8 @@ int sasprintf(char **strp, const char *fmt, ...) ATTRIBUTE_PRINTF(2, 3);
 
 int str2int(int *out, char *input, int base);
 
+char *file_get_contents(const char *filename);
+
 char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,
         xcb_atom_t type, size_t size);
 

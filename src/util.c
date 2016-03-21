@@ -79,6 +79,37 @@ int str2int(int *out, char *input, int base) {
     return SUCCESS;
 }
 
+char *file_get_contents(const char *filename) {
+    int fd;
+    struct stat stbuf;
+    FILE *fstr;
+    char buf[4096];
+    char *content;
+
+    if ((fd = open(filename, O_RDONLY)) < 0)
+        return NULL;
+    if (fstat(fd, &stbuf) < 0)
+        return NULL;
+    if ((fstr = fdopen(fd, "rb")) == NULL)
+        return NULL;
+
+    content = scalloc(stbuf.st_size + 1, 1);
+
+    while (!feof(fstr)) {
+        if (fgets(buf, sizeof(buf), fstr) == NULL) {
+            if (feof(fstr))
+                break;
+            FREE(content);
+            return NULL;
+        }
+
+        strncpy(content + strlen(content), buf, strlen(buf) + 1);
+    }
+
+    fclose(fstr);
+    return content;
+}
+
 char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,
         xcb_atom_t type, size_t size) {
     xcb_get_property_cookie_t cookie;

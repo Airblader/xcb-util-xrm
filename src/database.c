@@ -73,6 +73,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     int num_continuations = 0;
     char *str_continued;
     char *outwalk;
+    char *saveptr = NULL;
 
     /* Count the number of line continuations. */
     for (char *walk = str; *walk != '\0'; walk++) {
@@ -97,12 +98,72 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     database = scalloc(1, sizeof(struct xcb_xrm_database_t));
     TAILQ_INIT(database);
 
-    for (char *line = strtok(str_continued, "\n"); line != NULL; line = strtok(NULL, "\n")) {
+    for (char *line = strtok_r(str_continued, "\n", &saveptr); line != NULL; line = strtok_r(NULL, "\n", &saveptr)) {
+        /* Handle include directives. */
+        if (line[0] == '#') {
+            int i = 1;
+
+            /* Skip whitespace */
+            while (line[i] == ' ' || line[i] == '\t')
+                i++;
+
+            if (true &&
+                    line[i++] == 'i' &&
+                    line[i++] == 'n' &&
+                    line[i++] == 'c' &&
+                    line[i++] == 'l' &&
+                    line[i++] == 'u' &&
+                    line[i++] == 'd' &&
+                    line[i++] == 'e') {
+                xcb_xrm_database_t *included;
+                int j = strlen(line) - 1;
+
+                /* Skip whitespace */
+                while (line[i] == ' ' || line[i] == '\t' || line[i] == '"')
+                    i++;
+                while (line[j] == ' ' || line[j] == '\t' || line[j] == '"')
+                    j--;
+
+                char *filename = scalloc(1, j - i + 2);
+                memcpy(filename, &line[i], j - i + 1);
+                filename[j - 1 + 1] = '\0';
+
+                // TODO XXX Filename globbing
+
+                included = xcb_xrm_database_from_file(filename);
+                FREE(filename);
+
+                if (included != NULL)
+                    xcb_xrm_database_combine(included, &database, true);
+
+                continue;
+            }
+        }
+
         xcb_xrm_database_put_resource_line(&database, line);
     }
 
     FREE(str);
     FREE(str_continued);
+    return database;
+}
+
+/*
+ * Creates a database from a given file.
+ * If the file cannot be found or opened, NULL is returned.
+ *
+ * @param filename Valid filename.
+ * @returns The database described by the file's contents.
+ */
+xcb_xrm_database_t *xcb_xrm_database_from_file(const char *filename) {
+    xcb_xrm_database_t *database;
+    char *content = file_get_contents(filename);
+    if (content == NULL)
+        return NULL;
+
+    database = xcb_xrm_database_from_string(content);
+    FREE(content);
+
     return database;
 }
 
