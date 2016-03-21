@@ -67,13 +67,9 @@ xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *con
  * @ingroup xcb_xrm_database_t
  */
 xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
-    xcb_xrm_database_t *database;
     char *str = sstrdup(_str);
 
     int num_continuations = 0;
-    char *str_continued;
-    char *outwalk;
-
     /* Count the number of line continuations. */
     for (char *walk = str; *walk != '\0'; walk++) {
         if (*walk == '\\' && *(walk + 1) == '\n') {
@@ -82,8 +78,8 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     }
 
     /* Take care of line continuations. */
-    str_continued = scalloc(1, strlen(str) + 1 - 2 * num_continuations);
-    outwalk = str_continued;
+    char *str_continued = scalloc(1, strlen(str) + 1 - 2 * num_continuations);
+    char *outwalk = str_continued;
     for (char *walk = str; *walk != '\0'; walk++) {
         if (*walk == '\\' && *(walk + 1) == '\n') {
             walk++;
@@ -94,7 +90,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     }
     *outwalk = '\0';
 
-    database = scalloc(1, sizeof(struct xcb_xrm_database_t));
+    xcb_xrm_database_t *database = scalloc(1, sizeof(struct xcb_xrm_database_t));
     TAILQ_INIT(database);
 
     for (char *line = strtok(str_continued, "\n"); line != NULL; line = strtok(NULL, "\n")) {
@@ -118,8 +114,10 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
     xcb_xrm_entry_t *entry;
     TAILQ_FOREACH(entry, database, entries) {
         char *entry_str = xcb_xrm_entry_to_string(entry);
+
         char *tmp;
         sasprintf(&tmp, "%s%s\n", result == NULL ? "" : result, entry_str);
+
         FREE(entry_str);
         FREE(result);
         result = tmp;
@@ -142,12 +140,11 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
  * in the target database using the same resource specifier.
  */
 void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t *target_db, bool override) {
-    xcb_xrm_entry_t *entry;
-
     assert(source_db != NULL);
     assert(target_db != NULL);
+
     while (!TAILQ_EMPTY(source_db)) {
-        entry = TAILQ_FIRST(source_db);
+        xcb_xrm_entry_t *entry = TAILQ_FIRST(source_db);
         TAILQ_REMOVE(source_db, entry, entries);
         xcb_xrm_database_put(target_db, entry, override);
     }
@@ -169,16 +166,17 @@ void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t 
  * @param value The value of the resource.
  */
 void xcb_xrm_database_put_resource(xcb_xrm_database_t *database, const char *resource, const char *value) {
-    char *escaped;
-    char *line;
-
     assert(database != NULL);
     assert(resource != NULL);
     assert(value != NULL);
 
-    escaped = xcb_xrm_entry_escape_value(value);
+    char *escaped = xcb_xrm_entry_escape_value(value);
+
+    char *line;
     sasprintf(&line, "%s: %s", resource, escaped);
+
     FREE(escaped);
+
     xcb_xrm_database_put_resource_line(database, line);
     FREE(line);
 }
@@ -191,8 +189,6 @@ void xcb_xrm_database_put_resource(xcb_xrm_database_t *database, const char *res
  * @param line The complete resource specification to insert.
  */
 void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char *line) {
-    xcb_xrm_entry_t *entry;
-
     assert(database != NULL);
     assert(line != NULL);
 
@@ -201,6 +197,7 @@ void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char
     if (line[0] == '!' || line[0] == '#')
         return;
 
+    xcb_xrm_entry_t *entry;
     if (xcb_xrm_entry_parse(line, &entry, false) == 0) {
         xcb_xrm_database_put(database, entry, true);
     } else {
@@ -216,12 +213,11 @@ void xcb_xrm_database_put_resource_line(xcb_xrm_database_t *database, const char
  * @ingroup xcb_xrm_database_t
  */
 void xcb_xrm_database_free(xcb_xrm_database_t *database) {
-    xcb_xrm_entry_t *entry;
     if (database == NULL)
         return;
 
     while (!TAILQ_EMPTY(database)) {
-        entry = TAILQ_FIRST(database);
+        xcb_xrm_entry_t *entry = TAILQ_FIRST(database);
         TAILQ_REMOVE(database, entry, entries);
         xcb_xrm_entry_free(entry);
     }
@@ -230,16 +226,13 @@ void xcb_xrm_database_free(xcb_xrm_database_t *database) {
 }
 
 void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override) {
-    xcb_xrm_entry_t *current;
-    xcb_xrm_entry_t *previous;
-
     if (entry == NULL)
         return;
 
     /* Let's see whether this is a duplicate entry. */
-    current = TAILQ_FIRST(database);
+    xcb_xrm_entry_t *current = TAILQ_FIRST(database);
     while (current != NULL) {
-        previous = TAILQ_PREV(current, xcb_xrm_database_t, entries);
+        xcb_xrm_entry_t *previous = TAILQ_PREV(current, xcb_xrm_database_t, entries);
 
         if (xcb_xrm_entry_compare(entry, current) == 0) {
             if (!override) {
