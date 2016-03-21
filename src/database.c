@@ -107,6 +107,25 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
 }
 
 /*
+ * Creates a database from a given file.
+ * If the file cannot be found or opened, NULL is returned.
+ *
+ * @param filename Valid filename.
+ * @returns The database described by the file's contents.
+ */
+xcb_xrm_database_t *xcb_xrm_database_from_file(const char *filename) {
+    xcb_xrm_database_t *database;
+    char *content = file_get_contents(filename);
+    if (content == NULL)
+        return NULL;
+
+    database = xcb_xrm_database_from_string(content);
+    FREE(content);
+
+    return database;
+}
+
+/*
  * Returns a string representation of a database.
  * The string is owned by the caller and must be free'd.
  *

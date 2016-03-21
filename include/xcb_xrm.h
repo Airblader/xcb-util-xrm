@@ -121,6 +121,15 @@ xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *con
 xcb_xrm_database_t *xcb_xrm_database_from_string(const char *str);
 
 /**
+ * Creates a database from a given file.
+ * If the file cannot be found or opened, NULL is returned.
+ *
+ * @param filename Valid filename.
+ * @returns The database described by the file's contents.
+ */
+xcb_xrm_database_t *xcb_xrm_database_from_file(const char *filename);
+
+/**
  * Returns a string representation of a database.
  * The string is owned by the caller and must be free'd.
  *

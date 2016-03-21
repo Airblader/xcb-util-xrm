@@ -40,7 +40,9 @@
 #include <limits.h>
 #include <math.h>
 #include <assert.h>
+#include <fcntl.h>
 #include <sys/queue.h>
+#include <sys/stat.h>
 
 #include <xcb/xcb.h>
 
