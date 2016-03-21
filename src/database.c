@@ -108,6 +108,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
 
 /*
  * Returns a string representation of a database.
+ * The string is owned by the caller and must be free'd.
  *
  * @param database The database to return in string format.
  * @returns A string representation of the specified database.

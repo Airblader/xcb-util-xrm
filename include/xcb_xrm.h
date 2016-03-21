@@ -122,6 +122,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *str);
 
 /**
  * Returns a string representation of a database.
+ * The string is owned by the caller and must be free'd.
  *
  * @param database The database to return in string format.
  * @returns A string representation of the specified database.
@@ -200,6 +201,7 @@ int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, con
 
 /**
  * Returns the string value of the resource.
+ * The string is owned by the caller and must be free'd.
  *
  * @param resource The resource to use.
  * @returns The string value of the given resource.
