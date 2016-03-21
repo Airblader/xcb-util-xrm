@@ -59,7 +59,7 @@ int sasprintf(char **strp, const char *fmt, ...) {
     return result;
 }
 
-int str2int(int *out, char *input, int base) {
+int str2long(long *out, char *input, int base) {
     char *end;
     long result;
 
@@ -68,9 +68,9 @@ int str2int(int *out, char *input, int base) {
 
     errno = 0;
     result = strtol(input, &end, base);
-    if (result > INT_MAX || (errno == ERANGE && result == LONG_MAX))
+    if (errno == ERANGE && result == LONG_MAX)
         return -FAILURE;
-    if (result < INT_MIN || (errno == ERANGE && result == LONG_MIN))
+    if (errno == ERANGE && result == LONG_MIN)
         return -FAILURE;
     if (*end != '\0')
         return -FAILURE;

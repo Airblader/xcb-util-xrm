@@ -218,15 +218,29 @@ int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, con
 char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource);
 
 /**
- * Converts the resource's value into an integer and returns it.
+ * Returns the long value of the resource.
+ * If the value cannot be converted to a long, LONG_MIN is returned.
  *
  * @param resource The resource to use.
- * @returns The value as an integer if it was merely a number. Otherwise, this
- * returns 0 for 'off', 'no' or 'false' and 1 for 'on', 'yes' and 'true',
- * respectively, with all comparisons being case-insensitive. For all other
- * values, INT_MIN is returned.
+ * @returns The long value of the given resource.
  */
-int xcb_xrm_resource_value_int(xcb_xrm_resource_t *resource);
+long xcb_xrm_resource_value_long(xcb_xrm_resource_t *resource);
+
+/**
+ * Returns the bool value of the resource.
+ * This function works by checking the following things in this order:
+ *  - If the value can be converted to a long, the result will be the
+ *    truthiness of the converted number.
+ *  - If the value is one of "true", "on" or "yes" (case-insensitive), true is
+ *    returned.
+ *  - If the value is one of "false", "off" or "no" (case-insensitive), false
+ *    is returned.
+ *  - Otherwise, false is returned.
+ *
+ * @param resource The resource to use.
+ * @returns The bool value of the given resource.
+ */
+bool xcb_xrm_resource_value_bool(xcb_xrm_resource_t *resource);
 
 /**
  * Destroy the given resource.

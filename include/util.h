@@ -59,7 +59,7 @@ void *scalloc(size_t num, size_t size);
 
 int sasprintf(char **strp, const char *fmt, ...) ATTRIBUTE_PRINTF(2, 3);
 
-int str2int(int *out, char *input, int base);
+int str2long(long *out, char *input, int base);
 
 char *file_get_contents(const char *filename);
 

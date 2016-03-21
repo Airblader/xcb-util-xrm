@@ -106,38 +106,61 @@ char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
 }
 
 /*
- * Converts the resource's value into an integer and returns it.
+ * Returns the long value of the resource.
+ * If the value cannot be converted to a long, LONG_MIN is returned.
  *
  * @param resource The resource to use.
- * @returns The value as an integer if it was merely a number. Otherwise, this
- * returns 0 for 'off', 'no' or 'false' and 1 for 'on', 'yes' and 'true',
- * respectively, with all comparisons being case-insensitive. For all other
- * values, INT_MIN is returned.
+ * @returns The long value of the given resource.
  */
-int xcb_xrm_resource_value_int(xcb_xrm_resource_t *resource) {
-    int converted;
+long xcb_xrm_resource_value_long(xcb_xrm_resource_t *resource) {
+    long converted;
     if (resource == NULL)
-        return INT_MIN;
+        return LONG_MIN;
+
+    if (str2long(&converted, resource->value, 10) == 0)
+        return converted;
+
+    return LONG_MIN;
+}
+
+/*
+ * Returns the bool value of the resource.
+ * This function works by checking the following things in this order:
+ *  - If the value can be converted to a long, the result will be the
+ *    truthiness of the converted number.
+ *  - If the value is one of "true", "on" or "yes" (case-insensitive), true is
+ *    returned.
+ *  - If the value is one of "false", "off" or "no" (case-insensitive), false
+ *    is returned.
+ *  - Otherwise, INT_MIN is returned.
+ *
+ * @param resource The resource to use.
+ * @returns The bool value of the given resource.
+ */
+bool xcb_xrm_resource_value_bool(xcb_xrm_resource_t *resource) {
+    long converted;
+    if (resource == NULL)
+        return false;
 
     /* Let's first see if the value can be parsed into an integer directly. */
-    if (str2int(&converted, resource->value, 10) == 0)
+    if (str2long(&converted, resource->value, 10) == 0)
         return converted;
 
     /* Next up, we take care of signal words. */
     if (strcasecmp(resource->value, "true") == 0 ||
             strcasecmp(resource->value, "on") == 0 ||
             strcasecmp(resource->value, "yes") == 0) {
-        return 1;
+        return true;
     }
 
     if (strcasecmp(resource->value, "false") == 0 ||
             strcasecmp(resource->value, "off") == 0 ||
             strcasecmp(resource->value, "no") == 0) {
-        return 0;
+        return false;
     }
 
     /* Time to give up. */
-    return INT_MIN;
+    return false;
 }
 
 /*
