@@ -73,6 +73,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     int num_continuations = 0;
     char *str_continued;
     char *outwalk;
+    char *saveptr = NULL;
 
     /* Count the number of line continuations. */
     for (char *walk = str; *walk != '\0'; walk++) {
@@ -97,7 +98,45 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     database = scalloc(1, sizeof(struct xcb_xrm_database_t));
     TAILQ_INIT(database);
 
-    for (char *line = strtok(str_continued, "\n"); line != NULL; line = strtok(NULL, "\n")) {
+    for (char *line = strtok_r(str_continued, "\n", &saveptr); line != NULL; line = strtok_r(NULL, "\n", &saveptr)) {
+        /* Handle include directives. */
+        if (line[0] == '#') {
+            int i = 1;
+
+            /* Skip whitespace */
+            while (line[i] == ' ' || line[i] == '\t')
+                i++;
+
+            if (true &&
+                    line[i++] == 'i' &&
+                    line[i++] == 'n' &&
+                    line[i++] == 'c' &&
+                    line[i++] == 'l' &&
+                    line[i++] == 'u' &&
+                    line[i++] == 'd' &&
+                    line[i++] == 'e') {
+                xcb_xrm_database_t *included;
+
+                /* Skip whitespace */
+                while (line[i] == ' ' || line[i] == '\t')
+                    i++;
+
+                char *filename = scalloc(1, strlen(line) - i + 1);
+                memcpy(filename, &line[i], strlen(line) - i);
+                filename[strlen(line) - i] = '\0';
+
+                // TODO XXX Filename globbing
+
+                included = xcb_xrm_database_from_file(filename);
+                FREE(filename);
+
+                if (included != NULL)
+                    xcb_xrm_database_combine(included, &database, true);
+
+                continue;
+            }
+        }
+
         xcb_xrm_database_put_resource_line(&database, line);
     }
 
