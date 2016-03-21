@@ -20,7 +20,7 @@ lib_LTLIBRARIES = libxcb-xrm.la
 
 xcbinclude_HEADERS = include/xcb_xrm.h
 
-AM_CFLAGS = $(CWARNFLAGS) -Wno-declaration-after-statement
+AM_CFLAGS = $(CWARNFLAGS)
 
 libxcb_xrm_la_SOURCES = src/database.c src/resource.c src/entry.c src/match.c src/util.c
 libxcb_xrm_la_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS)

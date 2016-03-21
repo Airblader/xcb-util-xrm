@@ -48,16 +48,19 @@
  */
 int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
                          xcb_xrm_resource_t **_resource) {
+    xcb_xrm_resource_t *resource;
+    xcb_xrm_entry_t *query_name = NULL;
+    xcb_xrm_entry_t *query_class = NULL;
     int result = 0;
+
     if (database == NULL || TAILQ_EMPTY(database)) {
         *_resource = NULL;
         return -1;
     }
 
     *_resource = scalloc(1, sizeof(struct xcb_xrm_resource_t));
-    xcb_xrm_resource_t *resource = *_resource;
+    resource = *_resource;
 
-    xcb_xrm_entry_t *query_name;
     if (res_name == NULL || xcb_xrm_entry_parse(res_name, &query_name, true) < 0) {
         result = -1;
         goto done;
@@ -66,7 +69,6 @@ int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, con
     /* For the resource class input, we allow NULL and empty string as
      * placeholders for not specifying this string. Technically this is
      * violating the spec, but it seems to be widely used. */
-    xcb_xrm_entry_t *query_class;
     if (res_class != NULL && strlen(res_class) > 0 &&
             xcb_xrm_entry_parse(res_class, &query_class, true) < 0) {
         result = -1;
@@ -112,11 +114,11 @@ char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
  * values, INT_MIN is returned.
  */
 int xcb_xrm_resource_value_int(xcb_xrm_resource_t *resource) {
+    int converted;
     if (resource == NULL)
         return INT_MIN;
 
     /* Let's first see if the value can be parsed into an integer directly. */
-    int converted;
     if (str2int(&converted, resource->value, 10) == 0)
         return converted;
 

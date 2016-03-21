@@ -45,11 +45,11 @@ static void __match_free(xcb_xrm_match_t *match);
 int xcb_xrm_match(xcb_xrm_database_t *database, xcb_xrm_entry_t *query_name, xcb_xrm_entry_t *query_class,
         xcb_xrm_resource_t *resource) {
     xcb_xrm_match_t *best_match = NULL;
+    xcb_xrm_entry_t *cur_entry = TAILQ_FIRST(database);
 
     /* Let's figure out how many elements we need to store. */
     int num = xcb_xrm_entry_num_components(query_name);
 
-    xcb_xrm_entry_t *cur_entry = TAILQ_FIRST(database);
     while (cur_entry != NULL) {
         xcb_xrm_match_t *cur_match = __match_new(num);
 
