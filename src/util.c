@@ -80,33 +80,31 @@ int str2long(long *out, char *input, int base) {
 }
 
 char *file_get_contents(const char *filename) {
-    int fd;
+    FILE *file;
     struct stat stbuf;
-    FILE *fstr;
-    char buf[4096];
+    size_t file_size;
     char *content;
 
-    if ((fd = open(filename, O_RDONLY)) < 0)
-        return NULL;
-    if (fstat(fd, &stbuf) < 0)
-        return NULL;
-    if ((fstr = fdopen(fd, "rb")) == NULL)
+    if ((file = fopen(filename, "rb")) == NULL)
         return NULL;
 
-    content = scalloc(stbuf.st_size + 1, 1);
+    /* We want to read the file in one go, so figure out the file size. */
+    if (fstat(fileno(file), &stbuf) < 0) {
+        fclose(file);
+        return NULL;
+    }
+    file_size = stbuf.st_size;
 
-    while (!feof(fstr)) {
-        if (fgets(buf, sizeof(buf), fstr) == NULL) {
-            if (feof(fstr))
-                break;
-            FREE(content);
-            return NULL;
-        }
-
-        strncpy(content + strlen(content), buf, strlen(buf) + 1);
+    /* Read the file content. */
+    content = scalloc(file_size, 1);
+    if (fread(content, 1, file_size, file) != file_size) {
+        FREE(content);
+        fclose(file);
+        return NULL;
     }
 
-    fclose(fstr);
+    fclose(file);
+    content[file_size] = '\0';
     return content;
 }
 
