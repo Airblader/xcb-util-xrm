@@ -51,18 +51,22 @@ int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, con
     xcb_xrm_resource_t *resource;
     xcb_xrm_entry_t *query_name = NULL;
     xcb_xrm_entry_t *query_class = NULL;
-    int result = 0;
+    int result = SUCCESS;
 
     if (database == NULL || TAILQ_EMPTY(database)) {
         *_resource = NULL;
-        return -1;
+        return -FAILURE;
     }
 
     *_resource = scalloc(1, sizeof(struct xcb_xrm_resource_t));
+    if (_resource == NULL) {
+        result = -FAILURE;
+        goto done;
+    }
     resource = *_resource;
 
     if (res_name == NULL || xcb_xrm_entry_parse(res_name, &query_name, true) < 0) {
-        result = -1;
+        result = -FAILURE;
         goto done;
     }
 

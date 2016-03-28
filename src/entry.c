@@ -54,9 +54,15 @@ static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_sta
 static void xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
         xcb_xrm_binding_type_t binding_type, const char *str) {
     xcb_xrm_component_t *new = scalloc(1, sizeof(struct xcb_xrm_component_t));
+    if (new == NULL)
+        return;
 
     if (str != NULL) {
         new->name = sstrdup(str);
+        if (new->name == NULL) {
+            FREE(new);
+            return;
+        }
     }
 
     new->type = type;
@@ -106,9 +112,16 @@ int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resourc
 
     /* Copy the input string since it's const. */
     str = sstrdup(_str);
+    if (str == NULL)
+        return -FAILURE;
 
     /* Allocate memory for the return parameter. */
     *_entry = scalloc(1, sizeof(struct xcb_xrm_entry_t));
+    if (_entry == NULL) {
+        FREE(str);
+        return -FAILURE;
+    }
+
     entry = *_entry;
     TAILQ_INIT(&(entry->components));
 
@@ -217,6 +230,8 @@ process_normally:
     if (state.chunk == CS_VALUE) {
         *value_pos = '\0';
         entry->value = sstrdup(value_buf);
+        if (entry->value == NULL)
+            goto done_error;
     } else if (!resource_only) {
         /* Return error if there was no value for this entry. */
         goto done_error;
@@ -339,6 +354,9 @@ char *xcb_xrm_entry_escape_value(const char *value) {
     int new_size = strlen(value) + 1;
 
     copy = sstrdup(value);
+    if (copy == NULL)
+        return NULL;
+
     if (copy[0] == ' ' || copy[0] == '\t')
         new_size++;
     for (char *walk = copy; *walk != '\0'; walk++) {
@@ -347,6 +365,11 @@ char *xcb_xrm_entry_escape_value(const char *value) {
     }
 
     escaped = scalloc(1, new_size);
+    if (escaped == NULL) {
+        FREE(copy);
+        return NULL;
+    }
+
     outwalk = escaped;
     if (copy[0] == ' ' || copy[0] == '\t') {
         *(outwalk++) = '\\';

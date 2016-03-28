@@ -68,12 +68,15 @@ xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *con
  */
 xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     xcb_xrm_database_t *database;
-    char *str = sstrdup(_str);
-
+    char *str;
     int num_continuations = 0;
     char *str_continued;
     char *outwalk;
     char *saveptr = NULL;
+
+    str = sstrdup(_str);
+    if (str == NULL)
+        return NULL;
 
     /* Count the number of line continuations. */
     for (char *walk = str; *walk != '\0'; walk++) {
@@ -84,6 +87,11 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
 
     /* Take care of line continuations. */
     str_continued = scalloc(1, strlen(str) + 1 - 2 * num_continuations);
+    if (str_continued == NULL) {
+        FREE(str);
+        return NULL;
+    }
+
     outwalk = str_continued;
     for (char *walk = str; *walk != '\0'; walk++) {
         if (*walk == '\\' && *(walk + 1) == '\n') {
@@ -96,6 +104,12 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     *outwalk = '\0';
 
     database = scalloc(1, sizeof(struct xcb_xrm_database_t));
+    if (database == NULL) {
+        FREE(str);
+        FREE(str_continued);
+        return NULL;
+    }
+
     TAILQ_INIT(database);
 
     for (char *line = strtok_r(str_continued, "\n", &saveptr); line != NULL; line = strtok_r(NULL, "\n", &saveptr)) {
@@ -125,6 +139,9 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
                     j--;
 
                 char *filename = scalloc(1, j - i + 2);
+                if (filename == NULL)
+                    continue;
+
                 memcpy(filename, &line[i], j - i + 1);
                 filename[j - 1 + 1] = '\0';
 
