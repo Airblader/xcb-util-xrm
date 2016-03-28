@@ -31,21 +31,11 @@
 #include "util.h"
 
 char *sstrdup(const char *str) {
-    char *result = strdup(str);
-    if (result == NULL) {
-        err(-ENOMEM, "strdup() failed!");
-    }
-
-    return result;
+    return strdup(str);
 }
 
 void *scalloc(size_t num, size_t size) {
-    void *result = calloc(num, size);
-    if (result == NULL) {
-        err(-ENOMEM, "calloc(%zd, %zd) failed!", num, size);
-    }
-
-    return result;
+    return calloc(num, size);
 }
 
 int sasprintf(char **strp, const char *fmt, ...) {
@@ -53,8 +43,7 @@ int sasprintf(char **strp, const char *fmt, ...) {
     int result;
 
     va_start(args, fmt);
-    if ((result = vasprintf(strp, fmt, args)) == -1)
-        err(EXIT_FAILURE, "asprintf(%s)", fmt);
+    result = vasprintf(strp, fmt, args);
     va_end(args);
     return result;
 }
@@ -97,6 +86,11 @@ char *file_get_contents(const char *filename) {
 
     /* Read the file content. */
     content = scalloc(file_size, 1);
+    if (content == NULL) {
+        fclose(file);
+        return NULL;
+    }
+
     if (fread(content, 1, file_size, file) != file_size) {
         FREE(content);
         fclose(file);
