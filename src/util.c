@@ -30,24 +30,6 @@
 
 #include "util.h"
 
-char *sstrdup(const char *str) {
-    return strdup(str);
-}
-
-void *scalloc(size_t num, size_t size) {
-    return calloc(num, size);
-}
-
-int sasprintf(char **strp, const char *fmt, ...) {
-    va_list args;
-    int result;
-
-    va_start(args, fmt);
-    result = vasprintf(strp, fmt, args);
-    va_end(args);
-    return result;
-}
-
 int str2long(long *out, char *input, int base) {
     char *end;
     long result;
@@ -85,7 +67,7 @@ char *file_get_contents(const char *filename) {
     file_size = stbuf.st_size;
 
     /* Read the file content. */
-    content = scalloc(file_size, 1);
+    content = calloc(file_size + 1, 1);
     if (content == NULL) {
         fclose(file);
         return NULL;

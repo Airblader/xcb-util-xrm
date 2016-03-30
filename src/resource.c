@@ -58,7 +58,7 @@ int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, con
         return -FAILURE;
     }
 
-    *_resource = scalloc(1, sizeof(struct xcb_xrm_resource_t));
+    *_resource = calloc(1, sizeof(struct xcb_xrm_resource_t));
     if (_resource == NULL) {
         result = -FAILURE;
         goto done;

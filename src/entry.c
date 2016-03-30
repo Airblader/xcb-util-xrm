@@ -53,12 +53,12 @@ static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_sta
  */
 static void xcb_xrm_insert_component(xcb_xrm_entry_t *entry, xcb_xrm_component_type_t type,
         xcb_xrm_binding_type_t binding_type, const char *str) {
-    xcb_xrm_component_t *new = scalloc(1, sizeof(struct xcb_xrm_component_t));
+    xcb_xrm_component_t *new = calloc(1, sizeof(struct xcb_xrm_component_t));
     if (new == NULL)
         return;
 
     if (str != NULL) {
-        new->name = sstrdup(str);
+        new->name = strdup(str);
         if (new->name == NULL) {
             FREE(new);
             return;
@@ -111,12 +111,12 @@ int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resourc
     };
 
     /* Copy the input string since it's const. */
-    str = sstrdup(_str);
+    str = strdup(_str);
     if (str == NULL)
         return -FAILURE;
 
     /* Allocate memory for the return parameter. */
-    *_entry = scalloc(1, sizeof(struct xcb_xrm_entry_t));
+    *_entry = calloc(1, sizeof(struct xcb_xrm_entry_t));
     if (_entry == NULL) {
         FREE(str);
         return -FAILURE;
@@ -229,7 +229,7 @@ process_normally:
 
     if (state.chunk == CS_VALUE) {
         *value_pos = '\0';
-        entry->value = sstrdup(value_buf);
+        entry->value = strdup(value_buf);
         if (entry->value == NULL)
             goto done_error;
     } else if (!resource_only) {
@@ -323,11 +323,14 @@ char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry) {
     assert(entry != NULL);
     TAILQ_FOREACH(component, &(entry->components), components) {
         char *tmp;
-        sasprintf(&tmp, "%s%s%s", result == NULL ? "" : result,
+        if (asprintf(&tmp, "%s%s%s", result == NULL ? "" : result,
                 (is_first && component->binding_type == BT_TIGHT)
                     ? ""
                     : (component->binding_type == BT_TIGHT ? "." : "*"),
-                component->type == CT_NORMAL ? component->name : "?");
+                component->type == CT_NORMAL ? component->name : "?") < 0) {
+            FREE(result);
+            return NULL;
+        }
         FREE(result);
         result = tmp;
 
@@ -335,7 +338,11 @@ char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry) {
     }
 
     escaped_value = xcb_xrm_entry_escape_value(entry->value);
-    sasprintf(&value_buf, "%s: %s", result, escaped_value);
+    if (asprintf(&value_buf, "%s: %s", result, escaped_value) < 0) {
+        FREE(escaped_value);
+        FREE(result);
+        return NULL;
+    }
     FREE(escaped_value);
     FREE(result);
     result = value_buf;
@@ -348,33 +355,26 @@ char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry) {
  *
  */
 char *xcb_xrm_entry_escape_value(const char *value) {
-    char *copy;
     char *escaped;
     char *outwalk;
     int new_size = strlen(value) + 1;
 
-    copy = sstrdup(value);
-    if (copy == NULL)
-        return NULL;
-
-    if (copy[0] == ' ' || copy[0] == '\t')
+    if (value[0] == ' ' || value[0] == '\t')
         new_size++;
-    for (char *walk = copy; *walk != '\0'; walk++) {
+    for (const char *walk = value; *walk != '\0'; walk++) {
         if (*walk == '\n' || *walk == '\\')
             new_size++;
     }
 
-    escaped = scalloc(1, new_size);
-    if (escaped == NULL) {
-        FREE(copy);
+    escaped = calloc(1, new_size);
+    if (escaped == NULL)
         return NULL;
-    }
 
     outwalk = escaped;
-    if (copy[0] == ' ' || copy[0] == '\t') {
+    if (value[0] == ' ' || value[0] == '\t') {
         *(outwalk++) = '\\';
     }
-    for (char *walk = copy; *walk != '\0'; walk++) {
+    for (const char *walk = value; *walk != '\0'; walk++) {
         if (*walk == '\n') {
             *(outwalk++) = '\\';
             *(outwalk++) = 'n';
@@ -386,7 +386,6 @@ char *xcb_xrm_entry_escape_value(const char *value) {
         }
     }
     *outwalk = '\0';
-    FREE(copy);
 
     return escaped;
 }

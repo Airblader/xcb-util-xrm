@@ -78,9 +78,11 @@ int xcb_xrm_match(xcb_xrm_database_t *database, xcb_xrm_entry_t *query_name, xcb
     }
 
     if (best_match != NULL) {
-        resource->value = sstrdup(best_match->entry->value);
-        if (resource->value == NULL)
+        resource->value = strdup(best_match->entry->value);
+        if (resource->value == NULL) {
+            __match_free(best_match);
             return -FAILURE;
+        }
 
         __match_free(best_match);
         return SUCCESS;
@@ -190,12 +192,12 @@ static int __match_compare(int length, xcb_xrm_match_t *best, xcb_xrm_match_t *c
 }
 
 static xcb_xrm_match_t *__match_new(int length) {
-    xcb_xrm_match_t *match = scalloc(1, sizeof(struct xcb_xrm_match_t));
+    xcb_xrm_match_t *match = calloc(1, sizeof(struct xcb_xrm_match_t));
     if (match == NULL)
         return NULL;
 
     match->entry = NULL;
-    match->flags = scalloc(1, length * sizeof(xcb_xrm_match_flags_t));
+    match->flags = calloc(1, length * sizeof(xcb_xrm_match_flags_t));
     if (match->flags == NULL) {
         FREE(match);
         return NULL;

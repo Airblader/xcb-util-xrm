@@ -74,7 +74,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     char *outwalk;
     char *saveptr = NULL;
 
-    str = sstrdup(_str);
+    str = strdup(_str);
     if (str == NULL)
         return NULL;
 
@@ -86,7 +86,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     }
 
     /* Take care of line continuations. */
-    str_continued = scalloc(1, strlen(str) + 1 - 2 * num_continuations);
+    str_continued = calloc(1, strlen(str) + 1 - 2 * num_continuations);
     if (str_continued == NULL) {
         FREE(str);
         return NULL;
@@ -103,7 +103,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     }
     *outwalk = '\0';
 
-    database = scalloc(1, sizeof(struct xcb_xrm_database_t));
+    database = calloc(1, sizeof(struct xcb_xrm_database_t));
     if (database == NULL) {
         FREE(str);
         FREE(str_continued);
@@ -117,7 +117,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
         if (line[0] == '#') {
             int i = 1;
 
-            /* Skip whitespace */
+            /* Skip whitespace and quotes. */
             while (line[i] == ' ' || line[i] == '\t')
                 i++;
 
@@ -133,23 +133,23 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
                 char *filename;
                 int j = strlen(line) - 1;
 
-                /* Skip whitespace */
+                /* Skip whitespace and quotes. */
                 while (line[i] == ' ' || line[i] == '\t' || line[i] == '"')
                     i++;
                 while (line[j] == ' ' || line[j] == '\t' || line[j] == '"')
                     j--;
 
-                filename = scalloc(1, j - i + 2);
-                if (filename == NULL)
+                if (j < i) {
+                    /* Only whitespace left in this line. */
                     continue;
+                }
 
-                memcpy(filename, &line[i], j - i + 1);
-                filename[j - 1 + 1] = '\0';
+                filename = &line[i];
+                line[j+i] = '\0';
 
                 // TODO XXX Filename globbing
 
                 included = xcb_xrm_database_from_file(filename);
-                FREE(filename);
 
                 if (included != NULL)
                     xcb_xrm_database_combine(included, &database, true);
@@ -199,7 +199,11 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
     TAILQ_FOREACH(entry, database, entries) {
         char *entry_str = xcb_xrm_entry_to_string(entry);
         char *tmp;
-        sasprintf(&tmp, "%s%s\n", result == NULL ? "" : result, entry_str);
+        if (asprintf(&tmp, "%s%s\n", result == NULL ? "" : result, entry_str) < 0) {
+            FREE(entry_str);
+            FREE(result);
+            return NULL;
+        }
         FREE(entry_str);
         FREE(result);
         result = tmp;
@@ -264,7 +268,12 @@ void xcb_xrm_database_put_resource(xcb_xrm_database_t **database, const char *re
         *database = xcb_xrm_database_from_string("");
 
     escaped = xcb_xrm_entry_escape_value(value);
-    sasprintf(&line, "%s: %s", resource, escaped);
+    if (escaped == NULL)
+        return;
+    if (asprintf(&line, "%s: %s", resource, escaped) < 0) {
+        FREE(escaped);
+        return;
+    }
     FREE(escaped);
     xcb_xrm_database_put_resource_line(database, line);
     FREE(line);
@@ -322,7 +331,7 @@ void xcb_xrm_database_free(xcb_xrm_database_t *database) {
 void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override) {
     xcb_xrm_entry_t *current;
 
-    if (entry == NULL)
+    if (database == NULL || entry == NULL)
         return;
 
     /* Let's see whether this is a duplicate entry. */

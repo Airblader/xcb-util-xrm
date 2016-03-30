@@ -55,7 +55,7 @@ typedef struct xcb_xrm_match_t {
 	xcb_xrm_entry_t *entry;
     /* An array where the n-th element describes how the n-th element of the
      * query strings was matched. */
-	int *flags;
+	xcb_xrm_match_flags_t *flags;
 } xcb_xrm_match_t;
 
 /**

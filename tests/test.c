@@ -416,7 +416,7 @@ static void setup(void) {
 }
 
 static void cleanup(void) {
-    xcb_disconnect(conn);
+    XCloseDisplay(display);
 }
 
 static int check_parse_entry(const char *str, const char *value, const char *bindings, const int count, ...) {

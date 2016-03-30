@@ -31,18 +31,10 @@
 
 #include "externals.h"
 
-#if defined(__GNUC__) && ((__GNUC__ * 100 + __GNUC_MINOR__) >= 203)
-#define ATTRIBUTE_PRINTF(x,y) __attribute__((__format__(__printf__,x,y)))
-#else
-#define ATTRIBUTE_PRINTF(x,y)
-#endif
-
-#define FREE(p)          \
-    do {                 \
-        if (p != NULL) { \
-            free(p);     \
-            p = NULL;    \
-        }                \
+#define FREE(p)   \
+    do {          \
+        free(p);  \
+        p = NULL; \
     } while (0)
 
 #undef MAX
@@ -52,12 +44,6 @@
 
 #define SUCCESS 0
 #define FAILURE 1
-
-char *sstrdup(const char *str);
-
-void *scalloc(size_t num, size_t size);
-
-int sasprintf(char **strp, const char *fmt, ...) ATTRIBUTE_PRINTF(2, 3);
 
 int str2long(long *out, char *input, int base);
 
