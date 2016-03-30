@@ -78,6 +78,7 @@ core
 #
 xcb_xrm_intro
 vgcore.*
+test-driver
 test-suite.log
 *.dirstamp
 tests/test
