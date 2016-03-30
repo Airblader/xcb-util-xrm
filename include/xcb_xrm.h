@@ -29,7 +29,8 @@
 #ifndef __XCB_XRM_H__
 #define __XCB_XRM_H__
 
-#include "externals.h"
+#include <stdbool.h>
+#include <xcb/xcb.h>
 
 #ifdef __cplusplus
 extern "C" {
