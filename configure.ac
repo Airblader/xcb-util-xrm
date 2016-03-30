@@ -12,13 +12,8 @@ AC_USE_SYSTEM_EXTENSIONS
 AM_INIT_AUTOMAKE([foreign dist-bzip2 subdir-objects])
 AM_MAINTAINER_MODE
 
-AC_TYPE_SSIZE_T
-
 XCB_UTIL_M4_WITH_INCLUDE_PATH
 XCB_UTIL_COMMON([1.4], [1.6])
-
-AC_CHECK_HEADERS([endian.h sys/endian.h sys/byteorder.h libkern/OSByteOrder.h], [break])
-AC_CHECK_FUNCS([le32toh])
 
 AC_OUTPUT([Makefile
 	xcb-xrm.pc
