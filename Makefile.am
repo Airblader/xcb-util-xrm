@@ -14,7 +14,9 @@ ChangeLog:
 
 dist-hook: ChangeLog INSTALL
 
-EXTRA_DIST = autogen.sh xcb-xrm.pc.in include/xrm.h
+EXTRA_DIST = autogen.sh xcb-xrm.pc.in include/xcb_xrm.h include/database.h
+EXTRA_DIST += include/entry.h include/externals.h include/match.h
+EXTRA_DIST += include/resource.h include/util.h
 
 lib_LTLIBRARIES = libxcb-xrm.la
 
