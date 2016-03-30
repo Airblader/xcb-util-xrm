@@ -97,16 +97,16 @@ done:
 
 /*
  * Returns the string value of the resource.
- * The string is owned by the caller and must be free'd.
+ * The string is owned by the resource and free'd when the resource is free'd.
  *
  * @param resource The resource to use.
  * @returns The string value of the given resource.
  */
-char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
+const char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
     if (resource == NULL)
         return NULL;
 
-    return sstrdup(resource->value);
+    return resource->value;
 }
 
 /*

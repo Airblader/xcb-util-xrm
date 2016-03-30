@@ -521,7 +521,7 @@ static int check_get_resource(const char *str_database, const char *res_name, co
     xcb_xrm_resource_t *resource;
 
     bool err = false;
-    char *xcb_value;
+    const char *xcb_value;
     char *xlib_value;
 
     fprintf(stderr, "== Assert that getting resource <%s> / <%s> returns <%s>\n",
@@ -546,8 +546,6 @@ static int check_get_resource(const char *str_database, const char *res_name, co
 
     xcb_value = xcb_xrm_resource_value(resource);
     err |= check_strings(value, xcb_value, "Expected <%s>, but got <%s>\n", value, xcb_value);
-    if (xcb_value != NULL)
-        free(xcb_value);
 
     if (!expected_xlib_mismatch) {
         /* And for good measure, also compare it against Xlib. */
