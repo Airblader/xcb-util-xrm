@@ -130,6 +130,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
                     line[i++] == 'd' &&
                     line[i++] == 'e') {
                 xcb_xrm_database_t *included;
+                char *filename;
                 int j = strlen(line) - 1;
 
                 /* Skip whitespace */
@@ -138,7 +139,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
                 while (line[j] == ' ' || line[j] == '\t' || line[j] == '"')
                     j--;
 
-                char *filename = scalloc(1, j - i + 2);
+                filename = scalloc(1, j - i + 2);
                 if (filename == NULL)
                     continue;
 
