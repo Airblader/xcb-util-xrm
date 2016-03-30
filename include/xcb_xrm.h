@@ -203,7 +203,7 @@ void xcb_xrm_database_free(xcb_xrm_database_t *database);
  * components as the resource name.
  * @param resource A pointer to a xcb_xrm_resource_t* which will be modified to
  * contain the matched resource. Note that this resource must be free'd by the
- * caller.
+ * caller via a call to @ref xcb_xrm_resource_free().
  * @return 0 on success, a negative error code otherwise.
  */
 int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
