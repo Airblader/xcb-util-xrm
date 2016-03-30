@@ -37,7 +37,7 @@ void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, 
 
 /*
  * Loads the RESOURCE_MANAGER property and creates a database with its
- * contents. If the database could not be created, thie function will return
+ * contents. If the database could not be created, this function will return
  * NULL.
  *
  * @param conn A working XCB connection.

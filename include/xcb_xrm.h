@@ -99,7 +99,7 @@ typedef struct xcb_xrm_resource_t xcb_xrm_resource_t;
 
 /**
  * Loads the RESOURCE_MANAGER property and creates a database with its
- * contents. If the database could not be created, thie function will return
+ * contents. If the database could not be created, this function will return
  * NULL.
  *
  * @param conn A working XCB connection.
