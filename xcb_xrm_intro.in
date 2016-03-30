@@ -1,24 +1,13 @@
 /** 
 @file
-@brief XCB Utility functions
+@brief X resource manager utility functions for XCB
  
-These routines are used to facilitate the use of XCB in programs.
+These functions allow access to the X resource manager.
 */
 
 /**
 
-@mainpage XCB Utility Documentation
-@version @PACKAGE_VERSION@
-@author Ian Osgood <iano@quirkster.com>
-@author Bart Massey <bart@cs.pdx.edu>
-@author Jamey Sharp <jamey@minilop.net>
-@author Josh Triplett <josh@freedesktop.org>
-@author Keith Packard <keithp@keithp.com>
-@author Vincent Torri <torri@iecn.u-nancy.fr>
-@author Julien Danjou <julien@danjou.info>
-@author Arnaud Fontaine <arnau@debian.org>
-@date 2005-2008
-
-@section intro What is available ?
+@author Ingo Bürk <ingo.buerk@airblader.de>
+@date 2016
 
 */
