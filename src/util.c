@@ -30,7 +30,7 @@
 
 #include "util.h"
 
-int str2long(long *out, char *input, int base) {
+int str2long(long *out, const char *input, const int base) {
     char *end;
     long result;
 

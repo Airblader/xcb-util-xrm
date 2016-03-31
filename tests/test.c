@@ -57,11 +57,14 @@ static int test_entry_parser(void);
 static int test_get_resource(void);
 static int test_put_resource(void);
 static int test_combine_databases(void);
+static int test_convert(void);
 
 /* Assertion utilities */
 static bool check_strings(const char *expected, const char *actual,
         const char *format, ...) ATTRIBUTE_PRINTF(3, 4);
 static bool check_ints(const int expected, const int actual,
+        const char *format, ...) ATTRIBUTE_PRINTF(3, 4);
+static bool check_longs(const long expected, const long actual,
         const char *format, ...) ATTRIBUTE_PRINTF(3, 4);
 
 /* Utilities */
@@ -71,6 +74,8 @@ static char *check_get_resource_xlib(const char *str_database, const char *res_n
 static int check_get_resource(const char *database, const char *res_name, const char *res_class, const char *value,
         bool expected_xlib_mismatch);
 static int check_database(xcb_xrm_database_t *database, const char *expected);
+static int check_convert_to_long(const char *value, const long expected);
+static int check_convert_to_bool(const char *value, const bool expected);
 
 int main(void) {
     bool err = false;
@@ -80,6 +85,7 @@ int main(void) {
     err |= test_get_resource();
     err |= test_put_resource();
     err |= test_combine_databases();
+    err |= test_convert();
     cleanup();
 
     return err;
@@ -368,6 +374,38 @@ static int test_combine_databases(void) {
     return err;
 }
 
+static int test_convert(void) {
+    bool err = false;
+
+    err |= check_convert_to_bool(NULL, false);
+    err |= check_convert_to_bool("", false);
+    err |= check_convert_to_bool("0", false);
+    err |= check_convert_to_bool("1", true);
+    err |= check_convert_to_bool("10", true);
+    err |= check_convert_to_bool("true", true);
+    err |= check_convert_to_bool("TRUE", true);
+    err |= check_convert_to_bool("false", false);
+    err |= check_convert_to_bool("FALSE", false);
+    err |= check_convert_to_bool("on", true);
+    err |= check_convert_to_bool("ON", true);
+    err |= check_convert_to_bool("off", false);
+    err |= check_convert_to_bool("OFF", false);
+    err |= check_convert_to_bool("yes", true);
+    err |= check_convert_to_bool("YES", true);
+    err |= check_convert_to_bool("no", false);
+    err |= check_convert_to_bool("NO", false);
+    err |= check_convert_to_bool("abc", false);
+
+    err |= check_convert_to_long(NULL, LONG_MIN);
+    err |= check_convert_to_long("", LONG_MIN);
+    err |= check_convert_to_long("0", 0);
+    err |= check_convert_to_long("1", 1);
+    err |= check_convert_to_long("-1", -1);
+    err |= check_convert_to_long("100", 100);
+
+    return err;
+}
+
 static bool check_strings(const char *expected, const char *actual,
         const char *format, ...) {
     va_list ap;
@@ -385,6 +423,19 @@ static bool check_strings(const char *expected, const char *actual,
 }
 
 static bool check_ints(const int expected, const int actual,
+        const char *format, ...) {
+    va_list ap;
+
+    if (expected == actual)
+        return false;
+
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+    return true;
+}
+
+static bool check_longs(const long expected, const long actual,
         const char *format, ...) {
     va_list ap;
 
@@ -569,4 +620,14 @@ static int check_database(xcb_xrm_database_t *database, const char *expected) {
 
     FREE(actual);
     return err;
+}
+
+static int check_convert_to_long(const char *value, const long expected) {
+    long actual = xcb_xrm_convert_to_long(value);
+    return check_longs(expected, actual, "Expected <%ld>, but found <%ld>\n", expected, actual);
+}
+
+static int check_convert_to_bool(const char *value, const bool expected) {
+    bool actual = xcb_xrm_convert_to_bool(value);
+    return check_ints(expected, actual, "Expected <%d>, but found <%d>\n", expected, actual);
 }

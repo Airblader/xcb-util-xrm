@@ -16,7 +16,7 @@ dist-hook: ChangeLog INSTALL
 
 EXTRA_DIST = autogen.sh xcb-xrm.pc.in include/xcb_xrm.h include/database.h
 EXTRA_DIST += include/entry.h include/externals.h include/match.h
-EXTRA_DIST += include/resource.h include/util.h
+EXTRA_DIST += include/resource.h include/convert.h include/util.h
 
 lib_LTLIBRARIES = libxcb-xrm.la
 
@@ -24,7 +24,7 @@ xcbinclude_HEADERS = include/xcb_xrm.h
 
 AM_CFLAGS = $(CWARNFLAGS)
 
-libxcb_xrm_la_SOURCES = src/database.c src/resource.c src/entry.c src/match.c src/util.c
+libxcb_xrm_la_SOURCES = src/database.c src/resource.c src/entry.c src/match.c src/convert.c src/util.c
 libxcb_xrm_la_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS)
 libxcb_xrm_la_LIBADD = $(XCB_LIBS) -lm
 libxcb_xrm_la_LDFLAGS = -version-info 0:0:0 -no-undefined -export-symbols-regex '^xcb_xrm_'

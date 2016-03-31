@@ -37,8 +37,6 @@
 static int __resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
                          xcb_xrm_resource_t **_resource);
 static void __resource_free(xcb_xrm_resource_t *resource);
-static long __to_long(xcb_xrm_resource_t *resource);
-static bool __to_bool(xcb_xrm_resource_t *resource);
 
 /*
  * Returns the string value of a resource.
@@ -85,15 +83,10 @@ char *xcb_xrm_resource_get_string(xcb_xrm_database_t *database,
 long xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
         const char *res_name, const char *res_class) {
     long value;
+    char *str = xcb_xrm_resource_get_string(database, res_name, res_class);
 
-    xcb_xrm_resource_t *resource;
-    if (__resource_get(database, res_name, res_class, &resource) < 0) {
-        __resource_free(resource);
-        resource = NULL;
-    }
-
-    value = __to_long(resource);
-    __resource_free(resource);
+    value = xcb_xrm_convert_to_long(str);
+    FREE(str);
 
     return value;
 }
@@ -122,15 +115,10 @@ long xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
 bool xcb_xrm_resource_get_bool(xcb_xrm_database_t *database,
         const char *res_name, const char *res_class) {
     bool value;
+    char *str = xcb_xrm_resource_get_string(database, res_name, res_class);
 
-    xcb_xrm_resource_t *resource;
-    if (__resource_get(database, res_name, res_class, &resource) < 0) {
-        __resource_free(resource);
-        resource = NULL;
-    }
-
-    value = __to_bool(resource);
-    __resource_free(resource);
+    value = xcb_xrm_convert_to_bool(str);
+    FREE(str);
 
     return value;
 }
@@ -182,43 +170,6 @@ done:
     xcb_xrm_entry_free(query_name);
     xcb_xrm_entry_free(query_class);
     return result;
-}
-
-static long __to_long(xcb_xrm_resource_t *resource) {
-    long converted;
-    if (resource == NULL)
-        return LONG_MIN;
-
-    if (str2long(&converted, resource->value, 10) == 0)
-        return converted;
-
-    return LONG_MIN;
-}
-
-static bool __to_bool(xcb_xrm_resource_t *resource) {
-    long converted;
-    if (resource == NULL)
-        return false;
-
-    /* Let's first see if the value can be parsed into an integer directly. */
-    if (str2long(&converted, resource->value, 10) == 0)
-        return converted;
-
-    /* Next up, we take care of signal words. */
-    if (strcasecmp(resource->value, "true") == 0 ||
-            strcasecmp(resource->value, "on") == 0 ||
-            strcasecmp(resource->value, "yes") == 0) {
-        return true;
-    }
-
-    if (strcasecmp(resource->value, "false") == 0 ||
-            strcasecmp(resource->value, "off") == 0 ||
-            strcasecmp(resource->value, "no") == 0) {
-        return false;
-    }
-
-    /* Time to give up. */
-    return false;
 }
 
 static void __resource_free(xcb_xrm_resource_t *resource) {

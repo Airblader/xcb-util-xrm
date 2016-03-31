@@ -195,8 +195,8 @@ char *xcb_xrm_resource_get_string(xcb_xrm_database_t *database,
 
 /**
  * Returns the long value of a resource.
- * If the resource cannot be found or its value cannot be converted to a long,
- * LONG_MIN is returned.
+ * This is a convenience function which calls @ref xcb_xrm_resource_get_string
+ * and @ref xcb_xrm_convert_to_long.
  *
  * @param database The database to query.
  * @param res_name The fully qualified resource name string.
@@ -210,17 +210,8 @@ long xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
 
 /**
  * Returns the bool value of a resource.
- *
- * The return value of this function is determined by the following steps which
- * are executed in this order:
- *  - If the resource cannot be found, false is returned.
- *  - If the value can be converted to a long, the result will be the
- *    truthiness of the converted number.
- *  - If the value is one of "true", "on" or "yes" (case-insensitive), true is
- *    returned.
- *  - If the value is one of "false", "off" or "no" (case-insensitive), false
- *    is returned.
- *  - Otherwise, false is returned.
+ * This is a convenience function which calls @ref xcb_xrm_resource_get_string
+ * and @ref xcb_xrm_convert_to_bool.
  *
  * @param database The database to query.
  * @param res_name The fully qualified resource name string.
@@ -231,6 +222,35 @@ long xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
  */
 bool xcb_xrm_resource_get_bool(xcb_xrm_database_t *database,
         const char *res_name, const char *res_class);
+
+/**
+ * Converts a string value to a long.
+ * If value is NULL or cannot be converted to a long, LONG_MIN is returned.
+ *
+ * @param value The string value to convert.
+ * @returns The long to which the value converts or LONG_MIN if it cannot be
+ * converted.
+ */
+long xcb_xrm_convert_to_long(const char *value);
+
+/**
+ * Converts a string value to a bool.
+ *
+ * The conversion is done by applying the following steps in order:
+ *   - If value is NULL, return false.
+ *   - If value can be converted to a long, return the truthiness of the
+ *     converted number.
+ *   - If value is one of "true", "on" or "yes" (case-insensitive), return
+ *     true.
+ *   - If value is one of "false", "off" or "no" (case-insensitive), return
+ *     false.
+ *   - Return false.
+ *
+ * @param value The string value to convert.
+ * @returns The bool to which the value converts or false if it cannot be
+ * converted.
+ */
+bool xcb_xrm_convert_to_bool(const char *value);
 
 /**
  * @}
