@@ -128,6 +128,8 @@ xcb_xrm_database_t *xcb_xrm_database_from_default(xcb_connection_t *conn) {
  * @ingroup xcb_xrm_database_t
  */
 xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *conn, xcb_screen_t *screen) {
+    xcb_xrm_database_t *database;
+
     char *resources = xcb_util_get_property(conn, screen->root, XCB_ATOM_RESOURCE_MANAGER,
             XCB_ATOM_STRING, 16 * 1024);
     if (resources == NULL) {
@@ -135,7 +137,9 @@ xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *con
     }
 
     /* Parse the resource string. */
-    return xcb_xrm_database_from_string(resources);
+    database = xcb_xrm_database_from_string(resources);
+    FREE(resources);
+    return database;
 }
 
 /*
