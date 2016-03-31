@@ -50,6 +50,19 @@ int str2long(long *out, const char *input, const int base) {
     return SUCCESS;
 }
 
+char *get_home_dir_file(const char *filename) {
+    char *result;
+
+    char *home = getenv("HOME");
+    if (home == NULL)
+        return NULL;
+
+    if (asprintf(&result, "%s/%s", home, filename) < 0)
+        return NULL;
+
+    return result;
+}
+
 char *file_get_contents(const char *filename) {
     FILE *file;
     struct stat stbuf;

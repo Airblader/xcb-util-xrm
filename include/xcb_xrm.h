@@ -46,14 +46,11 @@ extern "C" {
  * Here is an example of how this library can be used to retrieve a
  * user-configured resource:
  * @code
- * int screennr;
  * xcb_connection_t *conn = xcb_connect(NULL, &screennr);
  * if (conn == NULL || xcb_connection_has_error(conn))
  *     err(EXIT_FAILURE, "Could not connect to the X server.");
  *
- * xcb_screen_t *screen = xcb_aux_get_screen(conn, screennr);
- *
- * xcb_xrm_database_t *database = xcb_xrm_database_from_resource_manager(conn, screen);
+ * xcb_xrm_database_t *database = xcb_xrm_database_from_default(conn);
  * if (database == NULL)
  *     err(EXIT_FAILURE, "Could not open database");
  *
@@ -80,6 +77,36 @@ extern "C" {
  * xcb_xrm_database_free ().
  */
 typedef struct xcb_xrm_database_t xcb_xrm_database_t;
+
+/**
+ * Creates a database similarly to XGetDefault(). For typical applications,
+ * this is the recommended way to construct the resource database.
+ *
+ * The database is created as follows:
+ *   - If the RESOURCE_MANAGER property exists on the root window of
+ *     screen 0, the database is constructed from it using @ref
+ *     xcb_xrm_database_from_resource_manager().
+ *   - Otherwise, if $HOME/.Xresources exists, the database is constructed from
+ *     it using @ref xcb_xrm_database_from_file().
+ *   - Otherwise, if $HOME/.Xdefaults exists, the database is constructed from
+ *     it using @ref xcb_xrm_database_from_file().
+ *   - If the environment variable XENVIRONMENT is set, the file specified by
+ *     it is loaded using @ref xcb_xrm_database_from_file and then combined with
+ *     the database using @ref xcb_xrm_database_combine() with override set to
+ *     true.
+ *     If XENVIRONMENT is not specified, the same is done with
+ *     $HOME/.Xdefaults-$HOSTNAME, wherein $HOSTNAME is determined by
+ *     gethostname(3p).
+ *
+ * This represents the way XGetDefault() creates the database for the most
+ * part, but is not exactly the same. In particular, XGetDefault() does not
+ * consider $HOME/.Xresources.
+ *
+ * @param conn XCB connection.
+ * @returns The constructed database. Can return NULL, e.g., if the screen
+ * cannot be determined.
+ */
+xcb_xrm_database_t *xcb_xrm_database_from_default(xcb_connection_t *conn);
 
 /**
  * Loads the RESOURCE_MANAGER property and creates a database with its
