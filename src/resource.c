@@ -33,20 +33,97 @@
 #include "match.h"
 #include "util.h"
 
+/* Forward declarations */
+static int __resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
+                         xcb_xrm_resource_t **_resource);
+static void __resource_free(xcb_xrm_resource_t *resource);
+
 /*
- * Fetches a resource from the database.
+ * Returns the string value of a resource.
+ * If the resource cannot be found, NULL is returned.
  *
- * @param database The database to use.
- * @param res_name The fully qualified resource name.
- * @param res_class The fully qualified resource class. Note that this argument
+ * Note that the string is owned by the caller and must be free'd.
+ *
+ * @param database The database to query.
+ * @param res_name The fully qualified resource name string.
+ * @param res_class The fully qualified resource class string. This argument
  * may be left empty / NULL, but if given, it must contain the same number of
- * components as the resource name.
- * @param resource A pointer to a xcb_xrm_resource_t* which will be modified to
- * contain the matched resource. Note that this resource must be free'd by the
- * caller.
- * @return 0 on success, a negative error code otherwise.
+ * components as res_name.
+ * @returns The string value of the resource or NULL otherwise.
  */
-int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
+char *xcb_xrm_resource_get_string(xcb_xrm_database_t *database,
+        const char *res_name, const char *res_class) {
+    char *value = NULL;
+
+    xcb_xrm_resource_t *resource;
+    if (__resource_get(database, res_name, res_class, &resource) < 0) {
+        __resource_free(resource);
+        return NULL;
+    }
+
+    assert(resource->value != NULL);
+    value = strdup(resource->value);
+    __resource_free(resource);
+
+    return value;
+}
+
+/*
+ * Returns the long value of a resource.
+ * If the resource cannot be found or its value cannot be converted to a long,
+ * LONG_MIN is returned.
+ *
+ * @param database The database to query.
+ * @param res_name The fully qualified resource name string.
+ * @param res_class The fully qualified resource class string. This argument
+ * may be left empty / NULL, but if given, it must contain the same number of
+ * components as res_name.
+ * @returns The long value of the resource or NULL otherwise.
+ */
+long xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
+        const char *res_name, const char *res_class) {
+    long value;
+    char *str = xcb_xrm_resource_get_string(database, res_name, res_class);
+
+    value = xcb_xrm_convert_to_long(str);
+    FREE(str);
+
+    return value;
+}
+
+/*
+ * Returns the bool value of a resource.
+ *
+ * The return value of this function is determined by the following steps which
+ * are executed in this order:
+ *  - If the resource cannot be found, false is returned.
+ *  - If the value can be converted to a long, the result will be the
+ *    truthiness of the converted number.
+ *  - If the value is one of "true", "on" or "yes" (case-insensitive), true is
+ *    returned.
+ *  - If the value is one of "false", "off" or "no" (case-insensitive), false
+ *    is returned.
+ *  - Otherwise, false is returned.
+ *
+ * @param database The database to query.
+ * @param res_name The fully qualified resource name string.
+ * @param res_class The fully qualified resource class string. This argument
+ * may be left empty / NULL, but if given, it must contain the same number of
+ * components as res_name.
+ * @returns The bool value of the resource or NULL otherwise.
+ */
+bool xcb_xrm_resource_get_bool(xcb_xrm_database_t *database,
+        const char *res_name, const char *res_class) {
+    bool value;
+    char *str = xcb_xrm_resource_get_string(database, res_name, res_class);
+
+    value = xcb_xrm_convert_to_bool(str);
+    FREE(str);
+
+    return value;
+}
+
+static int __resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
                          xcb_xrm_resource_t **_resource) {
     xcb_xrm_resource_t *resource;
     xcb_xrm_entry_t *query_name = NULL;
@@ -95,84 +172,7 @@ done:
     return result;
 }
 
-/*
- * Returns the string value of the resource.
- * The string is owned by the resource and free'd when the resource is free'd.
- *
- * @param resource The resource to use.
- * @returns The string value of the given resource.
- */
-const char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource) {
-    if (resource == NULL)
-        return NULL;
-
-    return resource->value;
-}
-
-/*
- * Returns the long value of the resource.
- * If the value cannot be converted to a long, LONG_MIN is returned.
- *
- * @param resource The resource to use.
- * @returns The long value of the given resource.
- */
-long xcb_xrm_resource_value_long(xcb_xrm_resource_t *resource) {
-    long converted;
-    if (resource == NULL)
-        return LONG_MIN;
-
-    if (str2long(&converted, resource->value, 10) == 0)
-        return converted;
-
-    return LONG_MIN;
-}
-
-/*
- * Returns the bool value of the resource.
- * This function works by checking the following things in this order:
- *  - If the value can be converted to a long, the result will be the
- *    truthiness of the converted number.
- *  - If the value is one of "true", "on" or "yes" (case-insensitive), true is
- *    returned.
- *  - If the value is one of "false", "off" or "no" (case-insensitive), false
- *    is returned.
- *  - Otherwise, INT_MIN is returned.
- *
- * @param resource The resource to use.
- * @returns The bool value of the given resource.
- */
-bool xcb_xrm_resource_value_bool(xcb_xrm_resource_t *resource) {
-    long converted;
-    if (resource == NULL)
-        return false;
-
-    /* Let's first see if the value can be parsed into an integer directly. */
-    if (str2long(&converted, resource->value, 10) == 0)
-        return converted;
-
-    /* Next up, we take care of signal words. */
-    if (strcasecmp(resource->value, "true") == 0 ||
-            strcasecmp(resource->value, "on") == 0 ||
-            strcasecmp(resource->value, "yes") == 0) {
-        return true;
-    }
-
-    if (strcasecmp(resource->value, "false") == 0 ||
-            strcasecmp(resource->value, "off") == 0 ||
-            strcasecmp(resource->value, "no") == 0) {
-        return false;
-    }
-
-    /* Time to give up. */
-    return false;
-}
-
-/*
- * Destroy the given resource.
- *
- * @param resource The resource to destroy.
- */
-void xcb_xrm_resource_free(xcb_xrm_resource_t *resource) {
+static void __resource_free(xcb_xrm_resource_t *resource) {
     if (resource == NULL)
         return;
 

@@ -26,30 +26,12 @@
  * authorization from the authors.
  *
  */
-#ifndef __UTIL_H__
-#define __UTIL_H__
+#ifndef __CONVERT_H__
+#define __CONVERT_H__
 
 #include "externals.h"
 
-#define FREE(p)   \
-    do {          \
-        free(p);  \
-        p = NULL; \
-    } while (0)
+#include "xcb_xrm.h"
+#include "util.h"
 
-#undef MAX
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#undef MIN
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-
-#define SUCCESS 0
-#define FAILURE 1
-
-int str2long(long *out, const char *input, const int base);
-
-char *file_get_contents(const char *filename);
-
-char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,
-        xcb_atom_t type, size_t size);
-
-#endif /* __UTIL_H__ */
+#endif /* __CONVERT_H__ */

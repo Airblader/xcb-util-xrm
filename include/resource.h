@@ -34,9 +34,10 @@
 #include "xcb_xrm.h"
 #include "util.h"
 #include "entry.h"
+#include "convert.h"
 
-struct xcb_xrm_resource_t {
+typedef struct xcb_xrm_resource_t {
     char *value;
-};
+} xcb_xrm_resource_t;
 
 #endif /* __RESOURCE_H__ */
