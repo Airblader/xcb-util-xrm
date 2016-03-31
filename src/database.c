@@ -228,10 +228,10 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
  * in the target database using the same resource specifier.
  */
 void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t **target_db, bool override) {
-    assert(source_db != NULL);
-
     if (*target_db == NULL)
         *target_db = xcb_xrm_database_from_string("");
+    if (source_db == NULL)
+        return;
 
     while (!TAILQ_EMPTY(source_db)) {
         xcb_xrm_entry_t *entry = TAILQ_FIRST(source_db);
