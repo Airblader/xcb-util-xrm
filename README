@@ -30,4 +30,4 @@ XCB util-xrm module provides the following libraries:
 You can obtain the latest development versions of XCB util-xrm using
 GIT. Use
 
-  git clone --recursive git@github.com:Airblader/xcb-util-xrm.git
+  git clone --recursive https://github.com/Airblader/xcb-util-xrm.git
