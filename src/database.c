@@ -99,7 +99,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_default(xcb_connection_t *conn) {
         hostname[1023] = '\0';
         if (gethostname(hostname, 1023) == 0) {
             char *name;
-            if (asprintf(&name, "$HOME/.Xdefaults-%s", hostname) >= 0) {
+            if (asprintf(&name, ".Xdefaults-%s", hostname) >= 0) {
                 xcb_xrm_database_t *source;
 
                 char *xdefaults = get_home_dir_file(name);
