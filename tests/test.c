@@ -518,19 +518,19 @@ static char *check_get_resource_xlib(const char *str_database, const char *res_n
 static int check_get_resource(const char *str_database, const char *res_name, const char *res_class, const char *value,
         bool expected_xlib_mismatch) {
     xcb_xrm_database_t *database;
-    xcb_xrm_resource_t *resource;
 
     bool err = false;
-    const char *xcb_value;
+    char *xcb_value;
     char *xlib_value;
 
     fprintf(stderr, "== Assert that getting resource <%s> / <%s> returns <%s>\n",
             res_name, res_class, value);
 
     database = xcb_xrm_database_from_string(str_database);
-    if (xcb_xrm_resource_get(database, res_name, res_class, &resource) < 0) {
+    xcb_value = xcb_xrm_resource_get_string(database, res_name, res_class);
+    if (xcb_value == NULL) {
         if (value != NULL) {
-            fprintf(stderr, "xcb_xrm_resource_get() < 0\n");
+            fprintf(stderr, "xcb_xrm_resource_get_string() returned NULL\n");
             err = true;
         }
 
@@ -544,8 +544,8 @@ static int check_get_resource(const char *str_database, const char *res_name, co
         goto done_get_resource;
     }
 
-    xcb_value = xcb_xrm_resource_value(resource);
     err |= check_strings(value, xcb_value, "Expected <%s>, but got <%s>\n", value, xcb_value);
+    free(xcb_value);
 
     if (!expected_xlib_mismatch) {
         /* And for good measure, also compare it against Xlib. */
@@ -557,10 +557,6 @@ static int check_get_resource(const char *str_database, const char *res_name, co
     }
 
 done_get_resource:
-    if (resource != NULL) {
-        xcb_xrm_resource_free(resource);
-    }
-
     xcb_xrm_database_free(database);
     return err;
 }

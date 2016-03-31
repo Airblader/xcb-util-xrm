@@ -46,8 +46,6 @@ extern "C" {
  * Here is an example of how this library can be used to retrieve a
  * user-configured resource:
  * @code
- * const char *value;
- *
  * int screennr;
  * xcb_connection_t *conn = xcb_connect(NULL, &screennr);
  * if (conn == NULL || xcb_connection_has_error(conn))
@@ -56,16 +54,14 @@ extern "C" {
  * xcb_screen_t *screen = xcb_aux_get_screen(conn, screennr);
  *
  * xcb_xrm_database_t *database = xcb_xrm_database_from_resource_manager(conn, screen);
+ * if (database == NULL)
+ *     err(EXIT_FAILURE, "Could not open database");
  *
- * xcb_xrm_resource_t *resource;
- * if (xcb_xrm_resource_get(database, "Xft.dpi", "Xft.dpi", &resource) < 0) {
- *     // Resource not found in database
- *     value = NULL;
- * } else {
- *     value = strdup(xcb_xrm_resource_value(resource));
- * }
+ * char *value = xcb_xrm_resource_get_string(database, "Xft.dpi", NULL);
+ * fprintf(stdout, "Xft.dpi: %s\n", value);
+ * if (value != NULL)
+ *     free(value);
  *
- * xcb_xrm_resource_free(resource);
  * xcb_xrm_database_free(database);
  * xcb_disconnect(conn);
  * @endcode
@@ -84,18 +80,6 @@ extern "C" {
  * xcb_xrm_database_free ().
  */
 typedef struct xcb_xrm_database_t xcb_xrm_database_t;
-
-/**
- * @struct xcb_xrm_resource_t
- * Describes a resource.
- *
- * This struct holds a resource after loading it from the database, e.g., by
- * calling @ref xcb_xrm_resource_get (). Its value can be retrieved using @ref
- * xcb_xrm_resource_value () or the utility functions for conversion. A
- * resource must always be free'd by calling @ref xcb_xrm_resource_free () on
- * it.
- */
-typedef struct xcb_xrm_resource_t xcb_xrm_resource_t;
 
 /**
  * Loads the RESOURCE_MANAGER property and creates a database with its
@@ -194,42 +178,42 @@ void xcb_xrm_database_put_resource_line(xcb_xrm_database_t **database, const cha
 void xcb_xrm_database_free(xcb_xrm_database_t *database);
 
 /**
- * Fetches a resource from the database.
+ * Returns the string value of a resource.
+ * If the resource cannot be found, NULL is returned.
  *
- * @param database The database to use.
- * @param res_name The fully qualified resource name.
- * @param res_class The fully qualified resource class. Note that this argument
+ * Note that the string is owned by the caller and must be free'd.
+ *
+ * @param database The database to query.
+ * @param res_name The fully qualified resource name string.
+ * @param res_class The fully qualified resource class string. This argument
  * may be left empty / NULL, but if given, it must contain the same number of
- * components as the resource name.
- * @param resource A pointer to a xcb_xrm_resource_t* which will be modified to
- * contain the matched resource. Note that this resource must be free'd by the
- * caller via a call to @ref xcb_xrm_resource_free().
- * @return 0 on success, a negative error code otherwise.
+ * components as res_name.
+ * @returns The string value of the resource or NULL otherwise.
  */
-int xcb_xrm_resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
-                         xcb_xrm_resource_t **resource);
+char *xcb_xrm_resource_get_string(xcb_xrm_database_t *database,
+        const char *res_name, const char *res_class);
 
 /**
- * Returns the string value of the resource.
- * The string is owned by the resource and free'd when the resource is free'd.
+ * Returns the long value of a resource.
+ * If the resource cannot be found or its value cannot be converted to a long,
+ * LONG_MIN is returned.
  *
- * @param resource The resource to use.
- * @returns The string value of the given resource.
+ * @param database The database to query.
+ * @param res_name The fully qualified resource name string.
+ * @param res_class The fully qualified resource class string. This argument
+ * may be left empty / NULL, but if given, it must contain the same number of
+ * components as res_name.
+ * @returns The long value of the resource or NULL otherwise.
  */
-const char *xcb_xrm_resource_value(xcb_xrm_resource_t *resource);
+long xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
+        const char *res_name, const char *res_class);
 
 /**
- * Returns the long value of the resource.
- * If the value cannot be converted to a long, LONG_MIN is returned.
+ * Returns the bool value of a resource.
  *
- * @param resource The resource to use.
- * @returns The long value of the given resource.
- */
-long xcb_xrm_resource_value_long(xcb_xrm_resource_t *resource);
-
-/**
- * Returns the bool value of the resource.
- * This function works by checking the following things in this order:
+ * The return value of this function is determined by the following steps which
+ * are executed in this order:
+ *  - If the resource cannot be found, false is returned.
  *  - If the value can be converted to a long, the result will be the
  *    truthiness of the converted number.
  *  - If the value is one of "true", "on" or "yes" (case-insensitive), true is
@@ -238,17 +222,15 @@ long xcb_xrm_resource_value_long(xcb_xrm_resource_t *resource);
  *    is returned.
  *  - Otherwise, false is returned.
  *
- * @param resource The resource to use.
- * @returns The bool value of the given resource.
+ * @param database The database to query.
+ * @param res_name The fully qualified resource name string.
+ * @param res_class The fully qualified resource class string. This argument
+ * may be left empty / NULL, but if given, it must contain the same number of
+ * components as res_name.
+ * @returns The bool value of the resource or NULL otherwise.
  */
-bool xcb_xrm_resource_value_bool(xcb_xrm_resource_t *resource);
-
-/**
- * Destroy the given resource.
- *
- * @param resource The resource to destroy.
- */
-void xcb_xrm_resource_free(xcb_xrm_resource_t *resource);
+bool xcb_xrm_resource_get_bool(xcb_xrm_database_t *database,
+        const char *res_name, const char *res_class);
 
 /**
  * @}
