@@ -151,6 +151,7 @@ static int __match_matches(xcb_xrm_entry_t *db_entry, xcb_xrm_entry_t *query_nam
                 break;
             default:
                 /* Never reached. */
+                assert(false);
                 return -FAILURE;
         }
     }
