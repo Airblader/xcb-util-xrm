@@ -160,8 +160,6 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database);
  * The entries from the source database are stored in the target database. If
  * the same specifier already exists in the target database, the value will be
  * overridden if override is set; otherwise, the value is discarded.
- * The source database will implicitly be free'd and must not be used
- * afterwards.
  * If NULL is passed for target_db, a new and empty database will be created
  * and returned in the pointer.
  *

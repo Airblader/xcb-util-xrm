@@ -305,8 +305,6 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
  * The entries from the source database are stored in the target database. If
  * the same specifier already exists in the target database, the value will be
  * overridden if override is set; otherwise, the value is discarded.
- * The source database will implicitly be free'd and must not be used
- * afterwards.
  * If NULL is passed for target_db, a new and empty database will be created
  * and returned in the pointer.
  *
@@ -316,6 +314,8 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
  * in the target database using the same resource specifier.
  */
 void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t **target_db, bool override) {
+    xcb_xrm_entry_t *entry;
+
     if (*target_db == NULL)
         *target_db = xcb_xrm_database_from_string("");
     if (source_db == NULL)
@@ -324,13 +324,10 @@ void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t 
     if (source_db == *target_db)
         return;
 
-    while (!TAILQ_EMPTY(source_db)) {
-        xcb_xrm_entry_t *entry = TAILQ_FIRST(source_db);
-        TAILQ_REMOVE(source_db, entry, entries);
-        xcb_xrm_database_put(*target_db, entry, override);
+    TAILQ_FOREACH(entry, source_db, entries) {
+        xcb_xrm_entry_t *copy = xcb_xrm_entry_copy(entry);
+        xcb_xrm_database_put(*target_db, copy, override);
     }
-
-    xcb_xrm_database_free(source_db);
 }
 
 /*

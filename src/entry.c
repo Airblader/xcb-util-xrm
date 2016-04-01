@@ -383,6 +383,49 @@ char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry) {
 }
 
 /*
+ * Copy the entry.
+ *
+ */
+xcb_xrm_entry_t *xcb_xrm_entry_copy(xcb_xrm_entry_t *entry) {
+    xcb_xrm_entry_t *copy;
+    xcb_xrm_component_t *component;
+
+    assert(entry != NULL);
+
+    copy = calloc(1, sizeof(struct xcb_xrm_entry_t));
+    if (copy == NULL)
+        return NULL;
+
+    copy->value = strdup(entry->value);
+    if (copy->value == NULL) {
+        FREE(copy);
+        return NULL;
+    }
+
+    TAILQ_INIT(&(copy->components));
+    TAILQ_FOREACH(component, &(entry->components), components) {
+        xcb_xrm_component_t *new = calloc(1, sizeof(struct xcb_xrm_component_t));
+        if (new == NULL) {
+            xcb_xrm_entry_free(copy);
+            return NULL;
+        }
+
+        new->name = strdup(component->name);
+        if (new->name == NULL) {
+            xcb_xrm_entry_free(copy);
+            FREE(new);
+            return NULL;
+        }
+
+        new->type = component->type;
+        new->binding_type = component->binding_type;
+        TAILQ_INSERT_TAIL(&(copy->components), new, components);
+    }
+
+    return copy;
+}
+
+/*
  * Escapes magic values.
  *
  */
