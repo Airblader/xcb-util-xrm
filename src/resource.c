@@ -78,7 +78,7 @@ char *xcb_xrm_resource_get_string(xcb_xrm_database_t *database,
  * @param res_class The fully qualified resource class string. This argument
  * may be left empty / NULL, but if given, it must contain the same number of
  * components as res_name.
- * @returns The long value of the resource or NULL otherwise.
+ * @returns The long value of the resource or LONG_MIN otherwise.
  */
 long xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
         const char *res_name, const char *res_class) {
@@ -110,7 +110,7 @@ long xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
  * @param res_class The fully qualified resource class string. This argument
  * may be left empty / NULL, but if given, it must contain the same number of
  * components as res_name.
- * @returns The bool value of the resource or NULL otherwise.
+ * @returns The bool value of the resource or false otherwise.
  */
 bool xcb_xrm_resource_get_bool(xcb_xrm_database_t *database,
         const char *res_name, const char *res_class) {
