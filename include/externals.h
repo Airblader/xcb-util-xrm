@@ -29,6 +29,7 @@
 #ifndef __EXTERNALS_H__
 #define __EXTERNALS_H__
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -45,5 +46,6 @@
 #include <sys/stat.h>
 
 #include <xcb/xcb.h>
+#include <xcb/xcb_aux.h>
 
 #endif /* __EXTERNALS_H__ */

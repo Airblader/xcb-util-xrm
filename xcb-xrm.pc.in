@@ -7,5 +7,6 @@ Name: XCB XRM library
 Description: XCB X resource manager utility functions
 Version: @PACKAGE_VERSION@
 Requires: xcb
+Requires.private: xcb-aux
 Libs: -L${libdir} -lxcb-xrm @LIBS@
 Cflags: -I${includedir}

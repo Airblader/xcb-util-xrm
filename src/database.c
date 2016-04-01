@@ -36,6 +36,87 @@
 void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override);
 
 /*
+ * Creates a database similarly to XGetDefault(). For typical applications,
+ * this is the recommended way to construct the resource database.
+ *
+ * The database is created as follows:
+ *   - If the RESOURCE_MANAGER property exists on the root window of
+ *     screen 0, the database is constructed from it using @ref
+ *     xcb_xrm_database_from_resource_manager().
+ *   - Otherwise, if $HOME/.Xresources exists, the database is constructed from
+ *     it using @ref xcb_xrm_database_from_file().
+ *   - Otherwise, if $HOME/.Xdefaults exists, the database is constructed from
+ *     it using @ref xcb_xrm_database_from_file().
+ *   - If the environment variable XENVIRONMENT is set, the file specified by
+ *     it is loaded using @ref xcb_xrm_database_from_file and then combined with
+ *     the database using @ref xcb_xrm_database_combine() with override set to
+ *     true.
+ *     If XENVIRONMENT is not specified, the same is done with
+ *     $HOME/.Xdefaults-$HOSTNAME, wherein $HOSTNAME is determined by
+ *     gethostname(3p).
+ *
+ * This represents the way XGetDefault() creates the database for the most
+ * part, but is not exactly the same. In particular, XGetDefault() does not
+ * consider $HOME/.Xresources.
+ *
+ * @param conn XCB connection.
+ * @returns The constructed database. Can return NULL, e.g., if the screen
+ * cannot be determined.
+ */
+xcb_xrm_database_t *xcb_xrm_database_from_default(xcb_connection_t *conn) {
+    xcb_screen_t *screen;
+    xcb_xrm_database_t *database;
+    char *xenvironment;
+
+    screen = xcb_aux_get_screen(conn, 0);
+    if (screen == NULL)
+        return NULL;
+
+    /* 1. Try to load the database from RESOURCE_MANAGER. */
+    database = xcb_xrm_database_from_resource_manager(conn, screen);
+
+    /* 2. Otherwise, try to load the database from $HOME/.Xresources. */
+    if (database == NULL) {
+        char *xresources = get_home_dir_file(".Xresources");
+        database = xcb_xrm_database_from_file(xresources);
+        FREE(xresources);
+    }
+
+    /* 3. Otherwise, try to load the database from $HOME/.Xdefaults. */
+    if (database == NULL) {
+        char *xdefaults = get_home_dir_file(".Xdefaults");
+        database = xcb_xrm_database_from_file(xdefaults);
+        FREE(xdefaults);
+    }
+
+    /* 4. If XENVIRONMENT is specified, merge the database defined by that file.
+     *    Otherwise, use $HOME/.Xdefaults-$HOSTNAME. */
+    if ((xenvironment = getenv("XENVIRONMENT")) != NULL) {
+        xcb_xrm_database_t *source = xcb_xrm_database_from_file(xenvironment);
+        xcb_xrm_database_combine(source, &database, true);
+    } else {
+        char hostname[1024];
+        hostname[1023] = '\0';
+        if (gethostname(hostname, 1023) == 0) {
+            char *name;
+            if (asprintf(&name, ".Xdefaults-%s", hostname) >= 0) {
+                xcb_xrm_database_t *source;
+
+                char *xdefaults = get_home_dir_file(name);
+                FREE(name);
+
+                source = xcb_xrm_database_from_file(xdefaults);
+                FREE(xdefaults);
+
+                xcb_xrm_database_combine(source, &database, true);
+            }
+        }
+    }
+
+    return database;
+}
+
+/*
  * Loads the RESOURCE_MANAGER property and creates a database with its
  * contents. If the database could not be created, this function will return
  * NULL.
@@ -47,6 +128,8 @@ void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, 
  * @ingroup xcb_xrm_database_t
  */
 xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *conn, xcb_screen_t *screen) {
+    xcb_xrm_database_t *database;
+
     char *resources = xcb_util_get_property(conn, screen->root, XCB_ATOM_RESOURCE_MANAGER,
             XCB_ATOM_STRING, 16 * 1024);
     if (resources == NULL) {
@@ -54,7 +137,9 @@ xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *con
     }
 
     /* Parse the resource string. */
-    return xcb_xrm_database_from_string(resources);
+    database = xcb_xrm_database_from_string(resources);
+    FREE(resources);
+    return database;
 }
 
 /*
@@ -147,8 +232,6 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
                 filename = &line[i];
                 line[j+i] = '\0';
 
-                // TODO XXX Filename globbing
-
                 included = xcb_xrm_database_from_file(filename);
 
                 if (included != NULL)
@@ -175,7 +258,12 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
  */
 xcb_xrm_database_t *xcb_xrm_database_from_file(const char *filename) {
     xcb_xrm_database_t *database;
-    char *content = file_get_contents(filename);
+    char *content;
+
+    if (filename == NULL)
+        return NULL;
+
+    content = file_get_contents(filename);
     if (content == NULL)
         return NULL;
 

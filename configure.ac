@@ -15,6 +15,8 @@ AM_MAINTAINER_MODE
 XCB_UTIL_M4_WITH_INCLUDE_PATH
 XCB_UTIL_COMMON([1.4], [1.6])
 
+PKG_CHECK_MODULES(XCB_AUX, xcb-aux)
+
 AC_OUTPUT([Makefile
 	xcb-xrm.pc
 	xcb_xrm_intro
