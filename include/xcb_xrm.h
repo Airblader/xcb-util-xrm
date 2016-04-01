@@ -75,6 +75,11 @@ extern "C" {
  * xcb_xrm_database_from_resource_manager (). All queries for a resource go
  * against a specific database. A database must always be free'd by using @ref
  * xcb_xrm_database_free ().
+ *
+ * Note that a database is not thread-safe, i.e., multiple threads should not
+ * operate on the same database instance. This is especially true for write
+ * operations on the database. However, you can use this library in a
+ * multi-threaded application as long as the database is thread-local.
  */
 typedef struct xcb_xrm_database_t xcb_xrm_database_t;
 
