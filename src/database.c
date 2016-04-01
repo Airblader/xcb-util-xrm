@@ -230,7 +230,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
                 }
 
                 filename = &line[i];
-                line[j+i] = '\0';
+                line[j+1] = '\0';
 
                 included = xcb_xrm_database_from_file(filename);
 
