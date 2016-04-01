@@ -31,6 +31,8 @@
 #include "entry.h"
 #include "util.h"
 
+#define BUFFER_SIZE 1024
+
 /**
  * Appends a single character to the current buffer.
  * If the buffer is not yet initialized or has been invalidated, it will be set up.
@@ -38,9 +40,23 @@
  */
 static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_state_t *state,
         const char str) {
+    ptrdiff_t offset;
+
     if (state->buffer_pos == NULL) {
-        memset(&(state->buffer), 0, sizeof(state->buffer));
+        FREE(state->buffer);
+        state->buffer = calloc(1, BUFFER_SIZE);
         state->buffer_pos = state->buffer;
+        if (state->buffer == NULL) {
+            /* Let's ignore this character and try again next time. */
+            return;
+        }
+    }
+
+    /* Increase the buffer if necessary. */
+    offset = state->buffer_pos - state->buffer;
+    if (offset % BUFFER_SIZE == BUFFER_SIZE - 1) {
+        state->buffer = realloc(state->buffer, offset + BUFFER_SIZE + 1);
+        state->buffer_pos = state->buffer + offset;
     }
 
     *(state->buffer_pos++) = str;
@@ -81,7 +97,9 @@ static void xcb_xrm_finalize_component(xcb_xrm_entry_t *entry, xcb_xrm_entry_par
         xcb_xrm_insert_component(entry, CT_NORMAL, state->current_binding_type, state->buffer);
     }
 
-    memset(&(state->buffer), 0, sizeof(state->buffer));
+    FREE(state->buffer);
+    /* No need to handle NULL for this calloc call. */
+    state->buffer = calloc(1, BUFFER_SIZE);
     state->buffer_pos = state->buffer;
     state->current_binding_type = BT_TIGHT;
 }
@@ -263,11 +281,13 @@ process_normally:
 
     FREE(str);
     FREE(value);
+    FREE(state.buffer);
     return 0;
 
 done_error:
     FREE(str);
     FREE(value);
+    FREE(state.buffer);
 
     xcb_xrm_entry_free(entry);
     *_entry = NULL;
