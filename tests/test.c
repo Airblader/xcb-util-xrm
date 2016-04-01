@@ -589,8 +589,7 @@ static int check_get_resource(const char *str_database, const char *res_name, co
             res_name, res_class, value);
 
     database = xcb_xrm_database_from_string(str_database);
-    xcb_value = xcb_xrm_resource_get_string(database, res_name, res_class);
-    if (xcb_value == NULL) {
+    if (xcb_xrm_resource_get_string(database, res_name, res_class, &xcb_value) < 0) {
         if (value != NULL) {
             fprintf(stderr, "xcb_xrm_resource_get_string() returned NULL\n");
             err = true;
@@ -634,11 +633,31 @@ static int check_database(xcb_xrm_database_t *database, const char *expected) {
 }
 
 static int check_convert_to_long(const char *value, const long expected) {
-    long actual = xcb_xrm_convert_to_long(value);
+    char *db_str;
+    long actual;
+    xcb_xrm_database_t *database;
+
+    asprintf(&db_str, "x: %s\n", value);
+
+    database = xcb_xrm_database_from_string(db_str);
+    free(db_str);
+    xcb_xrm_resource_get_long(database, "x", NULL, &actual);
+    xcb_xrm_database_free(database);
+
     return check_longs(expected, actual, "Expected <%ld>, but found <%ld>\n", expected, actual);
 }
 
 static int check_convert_to_bool(const char *value, const bool expected) {
-    bool actual = xcb_xrm_convert_to_bool(value);
+    char *db_str;
+    bool actual;
+    xcb_xrm_database_t *database;
+
+    asprintf(&db_str, "x: %s\n", value);
+
+    database = xcb_xrm_database_from_string(db_str);
+    free(db_str);
+    xcb_xrm_resource_get_bool(database, "x", NULL, &actual);
+    xcb_xrm_database_free(database);
+
     return check_ints(expected, actual, "Expected <%d>, but found <%d>\n", expected, actual);
 }

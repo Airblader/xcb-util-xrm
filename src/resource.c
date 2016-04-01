@@ -39,8 +39,7 @@ static int __resource_get(xcb_xrm_database_t *database, const char *res_name, co
 static void __resource_free(xcb_xrm_resource_t *resource);
 
 /*
- * Returns the string value of a resource.
- * If the resource cannot be found, NULL is returned.
+ * Find the string value of a resource.
  *
  * Note that the string is owned by the caller and must be free'd.
  *
@@ -49,78 +48,112 @@ static void __resource_free(xcb_xrm_resource_t *resource);
  * @param res_class The fully qualified resource class string. This argument
  * may be left empty / NULL, but if given, it must contain the same number of
  * components as res_name.
- * @returns The string value of the resource or NULL otherwise.
+ * @param out Out parameter to which the value will be written.
+ * @returns 0 if the resource was found, a negative error code otherwise.
  */
-char *xcb_xrm_resource_get_string(xcb_xrm_database_t *database,
-        const char *res_name, const char *res_class) {
-    char *value = NULL;
-
+int xcb_xrm_resource_get_string(xcb_xrm_database_t *database,
+        const char *res_name, const char *res_class, char **out) {
     xcb_xrm_resource_t *resource;
     if (__resource_get(database, res_name, res_class, &resource) < 0) {
         __resource_free(resource);
-        return NULL;
+        *out = NULL;
+        return -1;
     }
 
     assert(resource->value != NULL);
-    value = strdup(resource->value);
+    *out = strdup(resource->value);
     __resource_free(resource);
 
-    return value;
+    return 0;
 }
 
 /*
- * Returns the long value of a resource.
- * If the resource cannot be found or its value cannot be converted to a long,
- * LONG_MIN is returned.
+ * Find the long value of a resource.
  *
  * @param database The database to query.
  * @param res_name The fully qualified resource name string.
  * @param res_class The fully qualified resource class string. This argument
  * may be left empty / NULL, but if given, it must contain the same number of
  * components as res_name.
- * @returns The long value of the resource or LONG_MIN otherwise.
+ * @param out Out parameter to which the converted value will be written.
+ * @returns 0 if the resource was found and converted, -1 if the resource was
+ * found but could not be converted and -2 if the resource was not found.
  */
-long xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
-        const char *res_name, const char *res_class) {
-    long value;
-    char *str = xcb_xrm_resource_get_string(database, res_name, res_class);
+int xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
+        const char *res_name, const char *res_class, long *out) {
+    char *value;
+    if (xcb_xrm_resource_get_string(database, res_name, res_class, &value) < 0 || value == NULL) {
+        *out = LONG_MIN;
+        return -2;
+    }
 
-    value = xcb_xrm_convert_to_long(str);
-    FREE(str);
+    if (str2long(out, value, 10) < 0) {
+        *out = LONG_MIN;
+        FREE(value);
+        return -1;
+    }
 
-    return value;
+    FREE(value);
+    return 0;
 }
 
-/*
- * Returns the bool value of a resource.
+/**
+ * Find the bool value of a resource.
  *
- * The return value of this function is determined by the following steps which
- * are executed in this order:
- *  - If the resource cannot be found, false is returned.
- *  - If the value can be converted to a long, the result will be the
- *    truthiness of the converted number.
- *  - If the value is one of "true", "on" or "yes" (case-insensitive), true is
- *    returned.
- *  - If the value is one of "false", "off" or "no" (case-insensitive), false
- *    is returned.
- *  - Otherwise, false is returned.
+ * The conversion to a bool is done by applying the following steps in order:
+ *   - If the value can be converted to a long, return the truthiness of the
+ *     converted number.
+ *   - If the value is one of "true", "on" or "yes" (case-insensitive), return
+ *     true.
+ *   - If the value is one of "false", "off" or "no" (case-insensitive), return
+ *     false.
  *
  * @param database The database to query.
  * @param res_name The fully qualified resource name string.
  * @param res_class The fully qualified resource class string. This argument
  * may be left empty / NULL, but if given, it must contain the same number of
  * components as res_name.
- * @returns The bool value of the resource or false otherwise.
+ * @param out Out parameter to which the converted value will be written.
+ * @returns 0 if the resource was found and converted, -1 if the resource was
+ * found but could not be converted and -2 if the resource was not found.
  */
-bool xcb_xrm_resource_get_bool(xcb_xrm_database_t *database,
-        const char *res_name, const char *res_class) {
-    bool value;
-    char *str = xcb_xrm_resource_get_string(database, res_name, res_class);
+int xcb_xrm_resource_get_bool(xcb_xrm_database_t *database,
+        const char *res_name, const char *res_class, bool *out) {
+    char *value;
+    long converted;
 
-    value = xcb_xrm_convert_to_bool(str);
-    FREE(str);
+    if (xcb_xrm_resource_get_string(database, res_name, res_class, &value) < 0 || value == NULL) {
+        *out = false;
+        return -2;
+    }
 
-    return value;
+    /* Let's first see if the value can be parsed into an integer directly. */
+    if (str2long(&converted, value, 10) == 0) {
+        FREE(value);
+        *out = converted;
+        return 0;
+    }
+
+    /* Next up, we take care of signal words. */
+    if (strcasecmp(value, "true") == 0 ||
+            strcasecmp(value, "on") == 0 ||
+            strcasecmp(value, "yes") == 0) {
+        FREE(value);
+        *out = true;
+        return 0;
+    }
+
+    if (strcasecmp(value, "false") == 0 ||
+            strcasecmp(value, "off") == 0 ||
+            strcasecmp(value, "no") == 0) {
+        FREE(value);
+        *out = false;
+        return 0;
+    }
+
+    FREE(value);
+    *out = false;
+    return -1;
 }
 
 static int __resource_get(xcb_xrm_database_t *database, const char *res_name, const char *res_class,
