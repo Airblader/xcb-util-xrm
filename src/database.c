@@ -394,8 +394,6 @@ void xcb_xrm_database_put_resource_line(xcb_xrm_database_t **database, const cha
 
     if (xcb_xrm_entry_parse(line, &entry, false) == 0) {
         xcb_xrm_database_put(*database, entry, true);
-    } else {
-        xcb_xrm_entry_free(entry);
     }
 }
 
