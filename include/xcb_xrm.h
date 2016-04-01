@@ -96,7 +96,7 @@ typedef struct xcb_xrm_database_t xcb_xrm_database_t;
  *     true.
  *     If XENVIRONMENT is not specified, the same is done with
  *     $HOME/.Xdefaults-$HOSTNAME, wherein $HOSTNAME is determined by
- *     gethostname(3p).
+ *     gethostname(2).
  *
  * This represents the way XGetDefault() creates the database for the most
  * part, but is not exactly the same. In particular, XGetDefault() does not
