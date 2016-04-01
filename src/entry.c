@@ -31,6 +31,8 @@
 #include "entry.h"
 #include "util.h"
 
+#define BUFFER_SIZE 1024
+
 /**
  * Appends a single character to the current buffer.
  * If the buffer is not yet initialized or has been invalidated, it will be set up.
@@ -38,9 +40,23 @@
  */
 static void xcb_xrm_append_char(xcb_xrm_entry_t *entry, xcb_xrm_entry_parser_state_t *state,
         const char str) {
+    ptrdiff_t offset;
+
     if (state->buffer_pos == NULL) {
-        memset(&(state->buffer), 0, sizeof(state->buffer));
+        FREE(state->buffer);
+        state->buffer = calloc(1, BUFFER_SIZE);
         state->buffer_pos = state->buffer;
+        if (state->buffer == NULL) {
+            /* Let's ignore this character and try again next time. */
+            return;
+        }
+    }
+
+    /* Increase the buffer if necessary. */
+    offset = state->buffer_pos - state->buffer;
+    if (offset % BUFFER_SIZE == BUFFER_SIZE - 1) {
+        state->buffer = realloc(state->buffer, offset + BUFFER_SIZE + 1);
+        state->buffer_pos = state->buffer + offset;
     }
 
     *(state->buffer_pos++) = str;
@@ -81,7 +97,9 @@ static void xcb_xrm_finalize_component(xcb_xrm_entry_t *entry, xcb_xrm_entry_par
         xcb_xrm_insert_component(entry, CT_NORMAL, state->current_binding_type, state->buffer);
     }
 
-    memset(&(state->buffer), 0, sizeof(state->buffer));
+    FREE(state->buffer);
+    /* No need to handle NULL for this calloc call. */
+    state->buffer = calloc(1, BUFFER_SIZE);
     state->buffer_pos = state->buffer;
     state->current_binding_type = BT_TIGHT;
 }
@@ -98,12 +116,11 @@ static void xcb_xrm_finalize_component(xcb_xrm_entry_t *entry, xcb_xrm_entry_par
  *
  */
 int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resource_only) {
-    // TODO XXX Allow arbitrary sizes.
     char *str;
     xcb_xrm_entry_t *entry = NULL;
     xcb_xrm_component_t *last;
-    char value_buf[4096];
-    char *value_pos = value_buf;
+    char *value;
+    char *value_walk;
 
     xcb_xrm_entry_parser_state_t state = {
         .chunk = CS_INITIAL,
@@ -115,10 +132,21 @@ int xcb_xrm_entry_parse(const char *_str, xcb_xrm_entry_t **_entry, bool resourc
     if (str == NULL)
         return -FAILURE;
 
+    /* This is heavily overestimated, but we'll just keep it simple here.
+     * While this does not account for replacement of magic values, those only
+     * make the resulting string shorter than the input, so we're okay. */
+    value = calloc(1, strlen(str));
+    if (value == NULL) {
+        FREE(str);
+        return -FAILURE;
+    }
+    value_walk = value;
+
     /* Allocate memory for the return parameter. */
     *_entry = calloc(1, sizeof(struct xcb_xrm_entry_t));
     if (_entry == NULL) {
         FREE(str);
+        FREE(value);
         return -FAILURE;
     }
 
@@ -200,26 +228,26 @@ process_normally:
                 } else {
                     if (*walk == '\\') {
                         if (*(walk + 1) == ' ') {
-                            *(value_pos++) = ' ';
+                            *(value_walk++) = ' ';
                             walk++;
                         } else if (*(walk + 1) == '\t') {
-                            *(value_pos++) = '\t';
+                            *(value_walk++) = '\t';
                             walk++;
                         } else if (*(walk + 1) == '\\') {
-                            *(value_pos++) = '\\';
+                            *(value_walk++) = '\\';
                             walk++;
                         } else if (*(walk + 1) == 'n') {
-                            *(value_pos++) = '\n';
+                            *(value_walk++) = '\n';
                             walk++;
                         } else if (isdigit(*(walk + 1)) && isdigit(*(walk + 2)) && isdigit(*(walk + 3)) &&
                                 *(walk + 1) < '8' && *(walk + 2) < '8' && *(walk + 3) < '8') {
-                            *(value_pos++) = (*(walk + 1) - '0') * 64 + (*(walk + 2) - '0') * 8 + (*(walk + 3) - '0');
+                            *(value_walk++) = (*(walk + 1) - '0') * 64 + (*(walk + 2) - '0') * 8 + (*(walk + 3) - '0');
                             walk += 3;
                         } else {
-                            *(value_pos++) = *walk;
+                            *(value_walk++) = *walk;
                         }
                     } else {
-                        *(value_pos++) = *walk;
+                        *(value_walk++) = *walk;
                     }
                 }
 
@@ -228,8 +256,8 @@ process_normally:
     }
 
     if (state.chunk == CS_VALUE) {
-        *value_pos = '\0';
-        entry->value = strdup(value_buf);
+        *value_walk = '\0';
+        entry->value = strdup(value);
         if (entry->value == NULL)
             goto done_error;
     } else if (!resource_only) {
@@ -252,10 +280,14 @@ process_normally:
     }
 
     FREE(str);
+    FREE(value);
+    FREE(state.buffer);
     return 0;
 
 done_error:
     FREE(str);
+    FREE(value);
+    FREE(state.buffer);
 
     xcb_xrm_entry_free(entry);
     *_entry = NULL;

@@ -70,7 +70,7 @@ typedef struct xcb_xrm_component_t {
 /** Used in xcb_xrm_entry_parse. */
 typedef struct xcb_xrm_entry_parser_state_t {
     xcb_xrm_entry_parser_chunk_status_t chunk;
-    char buffer[4096];
+    char *buffer;
     char *buffer_pos;
     xcb_xrm_binding_type_t current_binding_type;
 } xcb_xrm_entry_parser_state_t;
