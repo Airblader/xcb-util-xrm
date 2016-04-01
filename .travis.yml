@@ -14,4 +14,5 @@ script:
     - "git submodule update --init && ./autogen.sh --prefix=/usr"
     - "make all"
     - "xvfb-run make check"
+    - "sleep 5"
     - "xvfb-run valgrind --leak-check=full -q --error-exitcode=1 --suppressions=./.travis.valgrind.supp tests/.libs/lt-test"
