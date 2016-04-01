@@ -321,6 +321,9 @@ void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t 
     if (source_db == NULL)
         return;
 
+    if (source_db == *target_db)
+        return;
+
     while (!TAILQ_EMPTY(source_db)) {
         xcb_xrm_entry_t *entry = TAILQ_FIRST(source_db);
         TAILQ_REMOVE(source_db, entry, entries);
