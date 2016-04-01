@@ -1,0 +1,10 @@
+# http://valgrind.org/docs/manual/manual-core.html#manual-core.suppress
+
+# XrmGetStringDatabase
+{
+    Ignore XrmGetStringDatabase leak
+    Memcheck:Leak
+    ...
+    fun:XrmGetStringDatabase
+    ...
+}

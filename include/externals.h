@@ -37,7 +37,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
-#include <err.h>
 #include <errno.h>
 #include <limits.h>
 #include <math.h>

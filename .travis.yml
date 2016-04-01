@@ -1,0 +1,17 @@
+language: c
+compiler:
+    - gcc
+addons:
+    apt:
+        packages:
+            - libxcb-util0-dev
+            - libxcb1-dev
+            - libx11-xcb-dev
+            - xutils-dev
+            - xvfb
+            - valgrind
+script:
+    - "git submodule update --init && ./autogen.sh --prefix=/usr"
+    - "make all"
+    - "xvfb-run make check"
+    - "xvfb-run valgrind --leak-check=full -q --error-exitcode=1 --suppressions=./.travis.valgrind.supp tests/.libs/lt-test"
