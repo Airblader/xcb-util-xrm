@@ -364,6 +364,7 @@ static int test_combine_databases(void) {
             "a1.b1*c1: 0\n"
             "a4.?.b4: 0\n"
             "a2.b2: 2\n");
+    xcb_xrm_database_free(source_db);
     xcb_xrm_database_free(target_db);
 
     source_db = xcb_xrm_database_from_string(
@@ -380,6 +381,7 @@ static int test_combine_databases(void) {
             "a1.b1*c1: 1\n"
             "a2.b2: 2\n"
             "a3: 3\n");
+    xcb_xrm_database_free(source_db);
     xcb_xrm_database_free(target_db);
 
     return err;

@@ -124,6 +124,12 @@ int xcb_xrm_entry_compare(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second);
 char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry);
 
 /**
+ * Copy the entry.
+ *
+ */
+xcb_xrm_entry_t *xcb_xrm_entry_copy(xcb_xrm_entry_t *entry);
+
+/**
  * Escapes magic values.
  *
  */
