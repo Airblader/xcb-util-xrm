@@ -97,7 +97,7 @@ int xcb_xrm_resource_get_long(xcb_xrm_database_t *database,
     return 0;
 }
 
-/**
+/*
  * Find the bool value of a resource.
  *
  * The conversion to a bool is done by applying the following steps in order:
