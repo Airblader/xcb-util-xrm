@@ -159,6 +159,9 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
     char *outwalk;
     char *saveptr = NULL;
 
+    if (_str == NULL)
+        return xcb_xrm_database_from_string("");
+
     str = strdup(_str);
     if (str == NULL)
         return NULL;

@@ -74,8 +74,8 @@ static char *check_get_resource_xlib(const char *str_database, const char *res_n
 static int check_get_resource(const char *database, const char *res_name, const char *res_class, const char *value,
         bool expected_xlib_mismatch);
 static int check_database(xcb_xrm_database_t *database, const char *expected);
-static int check_convert_to_long(const char *value, const long expected);
-static int check_convert_to_bool(const char *value, const bool expected);
+static int check_convert_to_long(const char *value, const long expected, int expected_return_code);
+static int check_convert_to_bool(const char *value, const bool expected, int expected_return_code);
 
 int main(void) {
     bool err = false;
@@ -390,31 +390,31 @@ static int test_combine_databases(void) {
 static int test_convert(void) {
     bool err = false;
 
-    err |= check_convert_to_bool(NULL, false);
-    err |= check_convert_to_bool("", false);
-    err |= check_convert_to_bool("0", false);
-    err |= check_convert_to_bool("1", true);
-    err |= check_convert_to_bool("10", true);
-    err |= check_convert_to_bool("true", true);
-    err |= check_convert_to_bool("TRUE", true);
-    err |= check_convert_to_bool("false", false);
-    err |= check_convert_to_bool("FALSE", false);
-    err |= check_convert_to_bool("on", true);
-    err |= check_convert_to_bool("ON", true);
-    err |= check_convert_to_bool("off", false);
-    err |= check_convert_to_bool("OFF", false);
-    err |= check_convert_to_bool("yes", true);
-    err |= check_convert_to_bool("YES", true);
-    err |= check_convert_to_bool("no", false);
-    err |= check_convert_to_bool("NO", false);
-    err |= check_convert_to_bool("abc", false);
+    err |= check_convert_to_bool(NULL, false, -2);
+    err |= check_convert_to_bool("", false, -2);
+    err |= check_convert_to_bool("0", false, 0);
+    err |= check_convert_to_bool("1", true, 0);
+    err |= check_convert_to_bool("10", true, 0);
+    err |= check_convert_to_bool("true", true, 0);
+    err |= check_convert_to_bool("TRUE", true, 0);
+    err |= check_convert_to_bool("false", false, 0);
+    err |= check_convert_to_bool("FALSE", false, 0);
+    err |= check_convert_to_bool("on", true, 0);
+    err |= check_convert_to_bool("ON", true, 0);
+    err |= check_convert_to_bool("off", false, 0);
+    err |= check_convert_to_bool("OFF", false, 0);
+    err |= check_convert_to_bool("yes", true, 0);
+    err |= check_convert_to_bool("YES", true, 0);
+    err |= check_convert_to_bool("no", false, 0);
+    err |= check_convert_to_bool("NO", false, 0);
+    err |= check_convert_to_bool("abc", false, -1);
 
-    err |= check_convert_to_long(NULL, LONG_MIN);
-    err |= check_convert_to_long("", LONG_MIN);
-    err |= check_convert_to_long("0", 0);
-    err |= check_convert_to_long("1", 1);
-    err |= check_convert_to_long("-1", -1);
-    err |= check_convert_to_long("100", 100);
+    err |= check_convert_to_long(NULL, LONG_MIN, -2);
+    err |= check_convert_to_long("", LONG_MIN, -2);
+    err |= check_convert_to_long("0", 0, 0);
+    err |= check_convert_to_long("1", 1, 0);
+    err |= check_convert_to_long("-1", -1, 0);
+    err |= check_convert_to_long("100", 100, 0);
 
     return err;
 }
@@ -591,8 +591,7 @@ static int check_get_resource(const char *str_database, const char *res_name, co
             res_name, res_class, value);
 
     database = xcb_xrm_database_from_string(str_database);
-    xcb_value = xcb_xrm_resource_get_string(database, res_name, res_class);
-    if (xcb_value == NULL) {
+    if (xcb_xrm_resource_get_string(database, res_name, res_class, &xcb_value) < 0) {
         if (value != NULL) {
             fprintf(stderr, "xcb_xrm_resource_get_string() returned NULL\n");
             err = true;
@@ -629,18 +628,51 @@ static int check_database(xcb_xrm_database_t *database, const char *expected) {
     bool err = false;
     char *actual = xcb_xrm_database_to_string(database);
 
+    fprintf(stderr, "== Assert that database is correct.\n");
     err |= check_strings(expected, actual, "Expected database <%s>, but found <%s>\n", expected, actual);
 
     FREE(actual);
     return err;
 }
 
-static int check_convert_to_long(const char *value, const long expected) {
-    long actual = xcb_xrm_convert_to_long(value);
-    return check_longs(expected, actual, "Expected <%ld>, but found <%ld>\n", expected, actual);
+static int check_convert_to_long(const char *value, const long expected, int expected_return_code) {
+    char *db_str = NULL;
+    long actual;
+    int actual_return_code;
+    xcb_xrm_database_t *database;
+
+    fprintf(stderr, "== Assert that <%s> is converted to long value <%ld>\n", value, expected);
+
+    if (value != NULL)
+        asprintf(&db_str, "x: %s\n", value);
+
+    database = xcb_xrm_database_from_string(db_str);
+    free(db_str);
+    actual_return_code = xcb_xrm_resource_get_long(database, "x", NULL, &actual);
+    xcb_xrm_database_free(database);
+
+    return check_ints(expected_return_code, actual_return_code, "Expected <%d>, but found <%d>\n",
+            expected_return_code, actual_return_code) ||
+        check_longs(expected, actual, "Expected <%ld>, but found <%ld>\n", expected, actual);
 }
 
-static int check_convert_to_bool(const char *value, const bool expected) {
-    bool actual = xcb_xrm_convert_to_bool(value);
-    return check_ints(expected, actual, "Expected <%d>, but found <%d>\n", expected, actual);
+static int check_convert_to_bool(const char *value, const bool expected, const int expected_return_code) {
+    char *db_str = NULL;
+    bool actual;
+    int actual_return_code;
+    xcb_xrm_database_t *database;
+
+    fprintf(stderr, "== Assert that <%s> is converted to boolean value <%d>\n", value, expected);
+
+    if (value != NULL)
+        asprintf(&db_str, "x: %s\n", value);
+
+    database = xcb_xrm_database_from_string(db_str);
+    free(db_str);
+    actual_return_code = xcb_xrm_resource_get_bool(database, "x", NULL, &actual);
+    xcb_xrm_database_free(database);
+
+    return check_ints(expected_return_code, actual_return_code, "Expected <%d>, but found <%d>\n",
+            expected_return_code, actual_return_code) ||
+        check_ints(expected, actual, "Expected <%d>, but found <%d>\n", expected, actual);
 }
