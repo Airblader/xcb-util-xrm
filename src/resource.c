@@ -193,12 +193,12 @@ static int __resource_get(xcb_xrm_database_t *database, const char *res_name, co
      * components, so let's check that this is the case. The specification
      * backs us up here. */
     if (query_class != NULL &&
-            xcb_xrm_entry_num_components(query_name) != xcb_xrm_entry_num_components(query_class)) {
+            __xcb_xrm_entry_num_components(query_name) != __xcb_xrm_entry_num_components(query_class)) {
         result = -1;
         goto done;
     }
 
-    result = xcb_xrm_match(database, query_name, query_class, resource);
+    result = __xcb_xrm_match(database, query_name, query_class, resource);
 done:
     xcb_xrm_entry_free(query_name);
     xcb_xrm_entry_free(query_class);

@@ -108,32 +108,32 @@ int xcb_xrm_entry_parse(const char *str, xcb_xrm_entry_t **entry, bool resource_
  * Returns the number of components of the given entry.
  *
  */
-int xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry);
+int __xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry);
 
 /**
  * Compares the two entries.
  * Returns 0 if they are the same and a negative error code otherwise.
  *
  */
-int xcb_xrm_entry_compare(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second);
+int __xcb_xrm_entry_compare(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second);
 
 /**
  * Returns a string representation of this entry.
  *
  */
-char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry);
+char *__xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry);
 
 /**
  * Copy the entry.
  *
  */
-xcb_xrm_entry_t *xcb_xrm_entry_copy(xcb_xrm_entry_t *entry);
+xcb_xrm_entry_t *__xcb_xrm_entry_copy(xcb_xrm_entry_t *entry);
 
 /**
  * Escapes magic values.
  *
  */
-char *xcb_xrm_entry_escape_value(const char *value);
+char *__xcb_xrm_entry_escape_value(const char *value);
 
 /**
  * Frees the given entry.

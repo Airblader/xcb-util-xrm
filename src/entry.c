@@ -298,7 +298,7 @@ done_error:
  * Returns the number of components of the given entry.
  *
  */
-int xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry) {
+int __xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry) {
     int result = 0;
 
     xcb_xrm_component_t *current;
@@ -314,7 +314,7 @@ int xcb_xrm_entry_num_components(xcb_xrm_entry_t *entry) {
  * Returns 0 if they are the same and a negative error code otherwise.
  *
  */
-int xcb_xrm_entry_compare(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second) {
+int __xcb_xrm_entry_compare(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second) {
     xcb_xrm_component_t *comp_first = TAILQ_FIRST(&(first->components));
     xcb_xrm_component_t *comp_second = TAILQ_FIRST(&(second->components));
 
@@ -345,7 +345,7 @@ int xcb_xrm_entry_compare(xcb_xrm_entry_t *first, xcb_xrm_entry_t *second) {
  * Returns a string representation of this entry.
  *
  */
-char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry) {
+char *__xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry) {
     char *result = NULL;
     char *value_buf;
     char *escaped_value;
@@ -369,7 +369,7 @@ char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry) {
         is_first = false;
     }
 
-    escaped_value = xcb_xrm_entry_escape_value(entry->value);
+    escaped_value = __xcb_xrm_entry_escape_value(entry->value);
     if (asprintf(&value_buf, "%s: %s", result, escaped_value) < 0) {
         FREE(escaped_value);
         FREE(result);
@@ -386,7 +386,7 @@ char *xcb_xrm_entry_to_string(xcb_xrm_entry_t *entry) {
  * Copy the entry.
  *
  */
-xcb_xrm_entry_t *xcb_xrm_entry_copy(xcb_xrm_entry_t *entry) {
+xcb_xrm_entry_t *__xcb_xrm_entry_copy(xcb_xrm_entry_t *entry) {
     xcb_xrm_entry_t *copy;
     xcb_xrm_component_t *component;
 
@@ -429,7 +429,7 @@ xcb_xrm_entry_t *xcb_xrm_entry_copy(xcb_xrm_entry_t *entry) {
  * Escapes magic values.
  *
  */
-char *xcb_xrm_entry_escape_value(const char *value) {
+char *__xcb_xrm_entry_escape_value(const char *value) {
     char *escaped;
     char *outwalk;
     int new_size = strlen(value) + 1;
