@@ -63,6 +63,23 @@ char *get_home_dir_file(const char *filename) {
     return result;
 }
 
+char *resolve_path(const char *path, const char *_base) {
+    char *base;
+    char *result;
+
+    if (path[0] == '/')
+        return strdup(path);
+
+    base = (_base == NULL) ? getcwd(NULL, 0) : strdup(_base);
+    if (base == NULL)
+        return NULL;
+
+    asprintf(&result, "%s/%s", base, path);
+    FREE(base);
+
+    return result;
+}
+
 char *file_get_contents(const char *filename) {
     FILE *file;
     struct stat stbuf;
@@ -113,6 +130,7 @@ char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_ato
     }
 
     if (reply == NULL || (reply_length = xcb_get_property_value_length(reply)) == 0) {
+        FREE(reply);
         return NULL;
     }
 
