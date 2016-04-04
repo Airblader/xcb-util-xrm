@@ -33,7 +33,7 @@
 #include "util.h"
 
 /* Forward declarations */
-void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override);
+void __xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override);
 
 /*
  * Creates a database similarly to XGetDefault(). For typical applications,
@@ -288,7 +288,7 @@ char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
 
     xcb_xrm_entry_t *entry;
     TAILQ_FOREACH(entry, database, entries) {
-        char *entry_str = xcb_xrm_entry_to_string(entry);
+        char *entry_str = __xcb_xrm_entry_to_string(entry);
         char *tmp;
         if (asprintf(&tmp, "%s%s\n", result == NULL ? "" : result, entry_str) < 0) {
             FREE(entry_str);
@@ -328,8 +328,8 @@ void xcb_xrm_database_combine(xcb_xrm_database_t *source_db, xcb_xrm_database_t 
         return;
 
     TAILQ_FOREACH(entry, source_db, entries) {
-        xcb_xrm_entry_t *copy = xcb_xrm_entry_copy(entry);
-        xcb_xrm_database_put(*target_db, copy, override);
+        xcb_xrm_entry_t *copy = __xcb_xrm_entry_copy(entry);
+        __xcb_xrm_database_put(*target_db, copy, override);
     }
 }
 
@@ -358,7 +358,7 @@ void xcb_xrm_database_put_resource(xcb_xrm_database_t **database, const char *re
     if (*database == NULL)
         *database = xcb_xrm_database_from_string("");
 
-    escaped = xcb_xrm_entry_escape_value(value);
+    escaped = __xcb_xrm_entry_escape_value(value);
     if (escaped == NULL)
         return;
     if (asprintf(&line, "%s: %s", resource, escaped) < 0) {
@@ -393,7 +393,7 @@ void xcb_xrm_database_put_resource_line(xcb_xrm_database_t **database, const cha
         return;
 
     if (xcb_xrm_entry_parse(line, &entry, false) == 0) {
-        xcb_xrm_database_put(*database, entry, true);
+        __xcb_xrm_database_put(*database, entry, true);
     }
 }
 
@@ -417,7 +417,7 @@ void xcb_xrm_database_free(xcb_xrm_database_t *database) {
     FREE(database);
 }
 
-void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override) {
+void __xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override) {
     xcb_xrm_entry_t *current;
 
     if (database == NULL || entry == NULL)
@@ -428,7 +428,7 @@ void xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, 
     while (current != NULL) {
         xcb_xrm_entry_t *previous = TAILQ_PREV(current, xcb_xrm_database_t, entries);
 
-        if (xcb_xrm_entry_compare(entry, current) == 0) {
+        if (__xcb_xrm_entry_compare(entry, current) == 0) {
             if (!override) {
                 xcb_xrm_entry_free(entry);
                 return;
