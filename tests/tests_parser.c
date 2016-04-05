@@ -117,6 +117,7 @@ int main(void) {
 }
 
 static int check_parse_entry(const char *str, const char *value, const char *bindings, const int count, ...) {
+    bool err = false;
     xcb_xrm_entry_t *entry;
     xcb_xrm_component_t *component;
     int actual_length = 0;
@@ -129,8 +130,6 @@ static int check_parse_entry(const char *str, const char *value, const char *bin
         fprintf(stderr, "xcb_xrm_entry_parse() < 0\n");
         return true;
     }
-
-    bool err = false;
 
     if (!check_parse_entry_resource_only) {
         /* Assert the entry's value. */
