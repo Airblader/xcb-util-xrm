@@ -49,6 +49,8 @@ int str2long(long *out, const char *input, const int base);
 
 char *get_home_dir_file(const char *filename);
 
+char *resolve_path(const char *path, const char *base);
+
 char *file_get_contents(const char *filename);
 
 char *xcb_util_get_property(xcb_connection_t *conn, xcb_window_t window, xcb_atom_t atom,

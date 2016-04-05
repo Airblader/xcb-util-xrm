@@ -58,6 +58,7 @@ static int test_get_resource(void);
 static int test_put_resource(void);
 static int test_combine_databases(void);
 static int test_convert(void);
+static int test_from_file(void);
 
 /* Assertion utilities */
 static bool check_strings(const char *expected, const char *actual,
@@ -86,6 +87,7 @@ int main(void) {
     err |= test_put_resource();
     err |= test_combine_databases();
     err |= test_convert();
+    err |= test_from_file();
     cleanup();
 
     return err;
@@ -415,6 +417,30 @@ static int test_convert(void) {
     err |= check_convert_to_long("1", 1, 0);
     err |= check_convert_to_long("-1", -1, 0);
     err |= check_convert_to_long("100", 100, 0);
+
+    return err;
+}
+
+static int test_from_file(void) {
+    bool err = false;
+    xcb_xrm_database_t *database;
+
+    /* Test xcb_xrm_database_from_file with relative #include directives */
+    database = xcb_xrm_database_from_file("tests/resources/1/xresources1");
+    err |= check_database(database,
+            "First: 1\n"
+            "Third: 3\n"
+            "Second: 2\n");
+    xcb_xrm_database_free(database);
+
+    /* Test xcb_xrm_database_from_default for resolution of $HOME. */
+    setenv("HOME", "tests/resources/2", true);
+    setenv("XENVIRONMENT", "tests/resources/2/xenvironment", true);
+    database = xcb_xrm_database_from_default(conn);
+    err |= check_database(database,
+            "First: 1\n"
+            "Second: 2\n");
+    xcb_xrm_database_free(database);
 
     return err;
 }

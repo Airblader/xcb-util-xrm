@@ -33,7 +33,9 @@
 #include "util.h"
 
 /* Forward declarations */
-void __xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override);
+static xcb_xrm_database_t *__xcb_xrm_database_from_string(const char *_str, const char *base);
+static xcb_xrm_database_t *__xcb_xrm_database_from_file(const char *_filename, const char *base);
+static void __xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override);
 
 /*
  * Creates a database similarly to XGetDefault(). For typical applications,
@@ -94,6 +96,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_default(xcb_connection_t *conn) {
     if ((xenvironment = getenv("XENVIRONMENT")) != NULL) {
         xcb_xrm_database_t *source = xcb_xrm_database_from_file(xenvironment);
         xcb_xrm_database_combine(source, &database, true);
+        xcb_xrm_database_free(source);
     } else {
         char hostname[1024];
         hostname[1023] = '\0';
@@ -109,6 +112,7 @@ xcb_xrm_database_t *xcb_xrm_database_from_default(xcb_connection_t *conn) {
                 FREE(xdefaults);
 
                 xcb_xrm_database_combine(source, &database, true);
+                xcb_xrm_database_free(source);
             }
         }
     }
@@ -151,7 +155,11 @@ xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *con
  *
  * @ingroup xcb_xrm_database_t
  */
-xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
+xcb_xrm_database_t *xcb_xrm_database_from_string(const char *str) {
+    return __xcb_xrm_database_from_string(str, NULL);
+}
+
+static xcb_xrm_database_t *__xcb_xrm_database_from_string(const char *_str, const char *base) {
     xcb_xrm_database_t *database;
     char *str;
     int num_continuations = 0;
@@ -219,6 +227,8 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
                     line[i++] == 'e') {
                 xcb_xrm_database_t *included;
                 char *filename;
+                char *copy;
+                char *new_base;
                 int j = strlen(line) - 1;
 
                 /* Skip whitespace and quotes. */
@@ -232,13 +242,33 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
                     continue;
                 }
 
-                filename = &line[i];
                 line[j+1] = '\0';
+                filename = resolve_path(&line[i], base);
+                if (filename == NULL)
+                    continue;
 
-                included = xcb_xrm_database_from_file(filename);
+                /* We need to strdup() the filename since dirname() will modify it. */
+                copy = strdup(filename);
+                if (copy == NULL) {
+                    FREE(filename);
+                    continue;
+                }
 
-                if (included != NULL)
+                new_base = dirname(copy);
+                if (new_base == NULL) {
+                    FREE(filename);
+                    FREE(copy);
+                    continue;
+                }
+
+                included = __xcb_xrm_database_from_file(filename, new_base);
+                FREE(filename);
+                FREE(copy);
+
+                if (included != NULL) {
                     xcb_xrm_database_combine(included, &database, true);
+                    xcb_xrm_database_free(included);
+                }
 
                 continue;
             }
@@ -260,17 +290,41 @@ xcb_xrm_database_t *xcb_xrm_database_from_string(const char *_str) {
  * @returns The database described by the file's contents.
  */
 xcb_xrm_database_t *xcb_xrm_database_from_file(const char *filename) {
-    xcb_xrm_database_t *database;
-    char *content;
+    return __xcb_xrm_database_from_file(filename, NULL);
+}
 
+static xcb_xrm_database_t *__xcb_xrm_database_from_file(const char *_filename, const char *base) {
+    char *filename = NULL;
+    char *copy = NULL;
+    char *new_base = NULL;
+    char *content = NULL;
+    xcb_xrm_database_t *database = NULL;
+
+    if (_filename == NULL)
+        return NULL;
+
+    filename = resolve_path(_filename, base);
     if (filename == NULL)
         return NULL;
 
+    /* We need to strdup() the filename since dirname() will modify it. */
+    copy = strdup(filename);
+    if (copy == NULL)
+        goto done_from_file;
+
+    new_base = dirname(copy);
+    if (new_base == NULL)
+        goto done_from_file;
+
     content = file_get_contents(filename);
     if (content == NULL)
-        return NULL;
+        goto done_from_file;
 
-    database = xcb_xrm_database_from_string(content);
+    database = __xcb_xrm_database_from_string(content, new_base);
+
+done_from_file:
+    FREE(filename);
+    FREE(copy);
     FREE(content);
 
     return database;
@@ -285,8 +339,11 @@ xcb_xrm_database_t *xcb_xrm_database_from_file(const char *filename) {
  */
 char *xcb_xrm_database_to_string(xcb_xrm_database_t *database) {
     char *result = NULL;
-
     xcb_xrm_entry_t *entry;
+
+    if (database == NULL)
+        return NULL;
+
     TAILQ_FOREACH(entry, database, entries) {
         char *entry_str = __xcb_xrm_entry_to_string(entry);
         char *tmp;
@@ -417,7 +474,7 @@ void xcb_xrm_database_free(xcb_xrm_database_t *database) {
     FREE(database);
 }
 
-void __xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override) {
+static void __xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override) {
     xcb_xrm_entry_t *current;
 
     if (database == NULL || entry == NULL)
