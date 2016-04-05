@@ -15,4 +15,6 @@ script:
     - "make all"
     - "xvfb-run make check"
     - "sleep 5"
-    - "xvfb-run valgrind --leak-check=full -q --error-exitcode=1 --suppressions=./.travis.valgrind.supp tests/.libs/lt-test"
+    - "xvfb-run valgrind --leak-check=full -q --error-exitcode=1 --suppressions=./.travis.valgrind.supp tests/.libs/lt-tests_parser"
+    - "xvfb-run valgrind --leak-check=full -q --error-exitcode=1 --suppressions=./.travis.valgrind.supp tests/.libs/lt-tests_match"
+    - "xvfb-run valgrind --leak-check=full -q --error-exitcode=1 --suppressions=./.travis.valgrind.supp tests/.libs/lt-tests_database"

@@ -17,6 +17,7 @@ dist-hook: ChangeLog INSTALL
 EXTRA_DIST = autogen.sh xcb-xrm.pc.in include/xcb_xrm.h include/database.h
 EXTRA_DIST += include/entry.h include/externals.h include/match.h
 EXTRA_DIST += include/resource.h include/util.h
+EXTRA_DIST += tests/tests_utils.h
 
 lib_LTLIBRARIES = libxcb-xrm.la
 
@@ -31,9 +32,20 @@ libxcb_xrm_la_LDFLAGS = -version-info 0:0:0 -no-undefined -export-symbols-regex 
 
 pkgconfig_DATA = xcb-xrm.pc
 
-TESTS = tests/test
-check_PROGRAMS = tests/test
-tests_test_SOURCE = tests/test.c
-tests_test_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS)
-tests_test_LDADD = libxcb-xrm.la $(XCB_LIBS)
-tests_test_LDFLAGS = $(TEST_LIBS)
+TESTS = tests/tests_parser tests/tests_match tests/tests_database
+check_PROGRAMS = $(TESTS)
+
+tests_tests_parser_SOURCES = tests/tests_utils.c tests/tests_parser.c
+tests_tests_parser_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS)
+tests_tests_parser_LDADD = libxcb-xrm.la $(XCB_LIBS)
+tests_tests_parser_LDFLAGS = $(TEST_LIBS)
+
+tests_tests_match_SOURCES = tests/tests_utils.c tests/tests_match.c
+tests_tests_match_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS)
+tests_tests_match_LDADD = libxcb-xrm.la $(XCB_LIBS)
+tests_tests_match_LDFLAGS = $(TEST_LIBS)
+
+tests_tests_database_SOURCES = tests/tests_utils.c tests/tests_database.c
+tests_tests_database_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS)
+tests_tests_database_LDADD = libxcb-xrm.la $(XCB_LIBS)
+tests_tests_database_LDFLAGS = $(TEST_LIBS)
