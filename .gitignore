@@ -81,7 +81,9 @@ vgcore.*
 test-driver
 test-suite.log
 *.dirstamp
-tests/test
+tests/tests_parser
+tests/tests_match
+tests/tests_database
 tests/*.log
 tests/*.trs
 documentation/*
