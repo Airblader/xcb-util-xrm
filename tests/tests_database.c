@@ -41,6 +41,7 @@ static void setup(void);
 static void cleanup(void);
 
 xcb_connection_t *conn;
+xcb_screen_t *screen;
 
 int main(void) {
     bool err = false;
@@ -173,6 +174,16 @@ static int test_from_file(void) {
             "Second: 2\n");
     xcb_xrm_database_free(database);
 
+    /* Test xcb_xrm_database_from_resource_manager. */
+    xcb_change_property_checked(conn, XCB_PROP_MODE_REPLACE, screen->root, XCB_ATOM_RESOURCE_MANAGER,
+            XCB_ATOM_STRING, 8, strlen("First: 1\n*Second: 2") + 1, "First: 1\n*Second: 2\0");
+    xcb_flush(conn);
+    database = xcb_xrm_database_from_resource_manager(conn, screen);
+    err |= check_database(database,
+            "First: 1\n"
+            "*Second: 2\n");
+    xcb_xrm_database_free(database);
+
     return err;
 }
 
@@ -183,6 +194,8 @@ static void setup(void) {
         fprintf(stderr, "Failed to connect to X11 server.\n");
         exit(EXIT_FAILURE);
     }
+
+    screen = xcb_aux_get_screen(conn, 0);
 }
 
 static void cleanup(void) {
