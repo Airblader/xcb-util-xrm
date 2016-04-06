@@ -32,9 +32,16 @@
 #include "match.h"
 #include "util.h"
 
+#ifndef MAX_INCLUDE_DEPTH
+/* We want to limit the maximum depth of (recursive) #include directives. This
+ * is to avoid accidental cyclic inclusions which would lead to an endless loop
+ * otherwise. */
+#define MAX_INCLUDE_DEPTH 100
+#endif
+
 /* Forward declarations */
-static xcb_xrm_database_t *__xcb_xrm_database_from_string(const char *_str, const char *base);
-static xcb_xrm_database_t *__xcb_xrm_database_from_file(const char *_filename, const char *base);
+static xcb_xrm_database_t *__xcb_xrm_database_from_string(const char *_str, const char *base, int depth);
+static xcb_xrm_database_t *__xcb_xrm_database_from_file(const char *_filename, const char *base, int depth);
 static void __xcb_xrm_database_put(xcb_xrm_database_t *database, xcb_xrm_entry_t *entry, bool override);
 
 /*
@@ -156,10 +163,10 @@ xcb_xrm_database_t *xcb_xrm_database_from_resource_manager(xcb_connection_t *con
  * @ingroup xcb_xrm_database_t
  */
 xcb_xrm_database_t *xcb_xrm_database_from_string(const char *str) {
-    return __xcb_xrm_database_from_string(str, NULL);
+    return __xcb_xrm_database_from_string(str, NULL, 0);
 }
 
-static xcb_xrm_database_t *__xcb_xrm_database_from_string(const char *_str, const char *base) {
+static xcb_xrm_database_t *__xcb_xrm_database_from_string(const char *_str, const char *base, int depth) {
     xcb_xrm_database_t *database;
     char *str;
     int num_continuations = 0;
@@ -217,7 +224,7 @@ static xcb_xrm_database_t *__xcb_xrm_database_from_string(const char *_str, cons
             while (line[i] == ' ' || line[i] == '\t')
                 i++;
 
-            if (true &&
+            if (depth < MAX_INCLUDE_DEPTH &&
                     line[i++] == 'i' &&
                     line[i++] == 'n' &&
                     line[i++] == 'c' &&
@@ -261,7 +268,7 @@ static xcb_xrm_database_t *__xcb_xrm_database_from_string(const char *_str, cons
                     continue;
                 }
 
-                included = __xcb_xrm_database_from_file(filename, new_base);
+                included = __xcb_xrm_database_from_file(filename, new_base, depth + 1);
                 FREE(filename);
                 FREE(copy);
 
@@ -290,10 +297,10 @@ static xcb_xrm_database_t *__xcb_xrm_database_from_string(const char *_str, cons
  * @returns The database described by the file's contents.
  */
 xcb_xrm_database_t *xcb_xrm_database_from_file(const char *filename) {
-    return __xcb_xrm_database_from_file(filename, NULL);
+    return __xcb_xrm_database_from_file(filename, NULL, 0);
 }
 
-static xcb_xrm_database_t *__xcb_xrm_database_from_file(const char *_filename, const char *base) {
+static xcb_xrm_database_t *__xcb_xrm_database_from_file(const char *_filename, const char *base, int depth) {
     char *filename = NULL;
     char *copy = NULL;
     char *new_base = NULL;
@@ -320,7 +327,7 @@ static xcb_xrm_database_t *__xcb_xrm_database_from_file(const char *_filename, c
     if (content == NULL)
         goto done_from_file;
 
-    database = __xcb_xrm_database_from_string(content, new_base);
+    database = __xcb_xrm_database_from_string(content, new_base, depth);
 
 done_from_file:
     FREE(filename);
