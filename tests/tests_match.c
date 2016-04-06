@@ -47,10 +47,6 @@ static int check_get_resource(const char *database, const char *res_name, const 
 static int check_convert_to_long(const char *value, const long expected, int expected_return_code);
 static int check_convert_to_bool(const char *value, const bool expected, int expected_return_code);
 
-static Display *display;
-static xcb_connection_t *conn;
-static xcb_screen_t *screen;
-
 int main(void) {
     bool err = false;
 
@@ -340,23 +336,8 @@ static int check_convert_to_bool(const char *value, const bool expected, const i
 }
 
 static void setup(void) {
-    display = XOpenDisplay(NULL);
-    if (display == NULL) {
-        fprintf(stderr, "Failed to connect to X11 server.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    conn = XGetXCBConnection(display);
-
-    screen = xcb_aux_get_screen(conn, DefaultScreen(display));
-    if (screen == NULL) {
-        fprintf(stderr, "Failed to get screen.\n");
-        exit(EXIT_FAILURE);
-    }
-
     XrmInitialize();
 }
 
 static void cleanup(void) {
-    XCloseDisplay(display);
 }
