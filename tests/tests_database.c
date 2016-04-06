@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include <xcb/xcb.h>
+#include <xcb/xcb_aux.h>
 
 #include "tests_utils.h"
 
@@ -185,5 +186,19 @@ static void setup(void) {
 }
 
 static void cleanup(void) {
+    xcb_generic_event_t *ev;
+
+    xcb_aux_sync(conn);
+    while ((ev = xcb_poll_for_event(conn))) {
+        if (ev->response_type == 0) {
+            puts("X11 error occurred");
+            exit(EXIT_FAILURE);
+        }
+        free(ev);
+    }
+    if (xcb_connection_has_error(conn)) {
+        fprintf(stderr, "The X11 connection broke at runtime.\n");
+        exit(EXIT_FAILURE);
+    }
     xcb_disconnect(conn);
 }
