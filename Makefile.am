@@ -18,6 +18,9 @@ EXTRA_DIST = autogen.sh xcb-xrm.pc.in include/xcb_xrm.h include/database.h
 EXTRA_DIST += include/entry.h include/externals.h include/match.h
 EXTRA_DIST += include/resource.h include/util.h
 EXTRA_DIST += tests/tests_utils.h
+EXTRA_DIST += tests/resources/1/xresources1 tests/resources/1/xresources2
+EXTRA_DIST += tests/resources/1/sub/xresources3
+EXTRA_DIST += tests/resources/2/xenvironment tests/resources/2/.Xresources
 
 lib_LTLIBRARIES = libxcb-xrm.la
 
