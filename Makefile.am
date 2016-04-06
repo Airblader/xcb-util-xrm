@@ -17,7 +17,10 @@ dist-hook: ChangeLog INSTALL
 EXTRA_DIST = autogen.sh xcb-xrm.pc.in include/xcb_xrm.h include/database.h
 EXTRA_DIST += include/entry.h include/externals.h include/match.h
 EXTRA_DIST += include/resource.h include/util.h
-EXTRA_DIST += tests/tests_utils.h
+EXTRA_DIST += tests/tests_utils.h tests/tests_database_runner.sh
+EXTRA_DIST += tests/resources/1/xresources1 tests/resources/1/xresources2
+EXTRA_DIST += tests/resources/1/sub/xresources3
+EXTRA_DIST += tests/resources/2/xenvironment tests/resources/2/.Xresources
 
 lib_LTLIBRARIES = libxcb-xrm.la
 
@@ -32,8 +35,9 @@ libxcb_xrm_la_LDFLAGS = -version-info 0:0:0 -no-undefined -export-symbols-regex 
 
 pkgconfig_DATA = xcb-xrm.pc
 
-TESTS = tests/tests_parser tests/tests_match tests/tests_database
-check_PROGRAMS = $(TESTS)
+DIRECT_TESTS = tests/tests_parser tests/tests_match
+TESTS = $(DIRECT_TESTS) tests/tests_database_runner.sh
+check_PROGRAMS = $(DIRECT_TESTS) tests/tests_database
 
 tests_tests_parser_SOURCES = tests/tests_utils.c tests/tests_parser.c
 tests_tests_parser_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS)

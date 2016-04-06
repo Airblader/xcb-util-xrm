@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include <xcb/xcb.h>
+#include <xcb/xcb_aux.h>
 
 #include "tests_utils.h"
 
@@ -135,12 +136,28 @@ static int test_combine_databases(void) {
     return err;
 }
 
+static void set_env_var_to_path(const char *var, const char *srcdir, const char *path) {
+    char *buffer;
+    asprintf(&buffer, "%s/%s", srcdir, path);
+    setenv(var, buffer, true);
+    free(buffer);
+}
+
 static int test_from_file(void) {
     bool err = false;
     xcb_xrm_database_t *database;
+    char *path;
+    const char *srcdir;
+
+    /* Set by automake, needed for out-of-tree builds */
+    srcdir = getenv("srcdir");
+    if (srcdir == NULL)
+        srcdir = ".";
 
     /* Test xcb_xrm_database_from_file with relative #include directives */
-    database = xcb_xrm_database_from_file("tests/resources/1/xresources1");
+    asprintf(&path, "%s/tests/resources/1/xresources1", srcdir);
+    database = xcb_xrm_database_from_file(path);
+    free(path);
     err |= check_database(database,
             "First: 1\n"
             "Third: 3\n"
@@ -148,8 +165,8 @@ static int test_from_file(void) {
     xcb_xrm_database_free(database);
 
     /* Test xcb_xrm_database_from_default for resolution of $HOME. */
-    setenv("HOME", "tests/resources/2", true);
-    setenv("XENVIRONMENT", "tests/resources/2/xenvironment", true);
+    set_env_var_to_path("HOME", srcdir, "tests/resources/2");
+    set_env_var_to_path("XENVIRONMENT", srcdir, "tests/resources/2/xenvironment");
     database = xcb_xrm_database_from_default(conn);
     err |= check_database(database,
             "First: 1\n"
@@ -162,8 +179,26 @@ static int test_from_file(void) {
 static void setup(void) {
     int screennr;
     conn = xcb_connect(NULL, &screennr);
+    if (xcb_connection_has_error(conn)) {
+        fprintf(stderr, "Failed to connect to X11 server.\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void cleanup(void) {
+    xcb_generic_event_t *ev;
+
+    xcb_aux_sync(conn);
+    while ((ev = xcb_poll_for_event(conn))) {
+        if (ev->response_type == 0) {
+            puts("X11 error occurred");
+            exit(EXIT_FAILURE);
+        }
+        free(ev);
+    }
+    if (xcb_connection_has_error(conn)) {
+        fprintf(stderr, "The X11 connection broke at runtime.\n");
+        exit(EXIT_FAILURE);
+    }
     xcb_disconnect(conn);
 }
