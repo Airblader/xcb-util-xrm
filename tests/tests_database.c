@@ -178,6 +178,10 @@ static int test_from_file(void) {
 static void setup(void) {
     int screennr;
     conn = xcb_connect(NULL, &screennr);
+    if (xcb_connection_has_error(conn)) {
+        fprintf(stderr, "Failed to connect to X11 server.\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void cleanup(void) {
