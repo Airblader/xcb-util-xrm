@@ -165,6 +165,15 @@ static int test_from_file(void) {
             "Second: 2\n");
     xcb_xrm_database_free(database);
 
+    /* Test that the inclusion depth is limited */
+    asprintf(&path, "%s/tests/resources/3/loop.xresources", srcdir);
+    database = xcb_xrm_database_from_file(path);
+    free(path);
+    err |= check_database(database,
+            "First: 1\n"
+            "Second: 2\n");
+    xcb_xrm_database_free(database);
+
     /* Test xcb_xrm_database_from_default for resolution of $HOME. */
     set_env_var_to_path("HOME", srcdir, "tests/resources/2");
     set_env_var_to_path("XENVIRONMENT", srcdir, "tests/resources/2/xenvironment");
