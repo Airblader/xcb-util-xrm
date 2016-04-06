@@ -18,3 +18,5 @@ script:
     - "valgrind --leak-check=full -q --error-exitcode=1 --suppressions=./.travis.valgrind.supp tests/.libs/lt-tests_parser"
     - "valgrind --leak-check=full -q --error-exitcode=1 --suppressions=./.travis.valgrind.supp tests/.libs/lt-tests_match"
     - "xvfb-run valgrind --leak-check=full -q --error-exitcode=1 --suppressions=./.travis.valgrind.supp tests/.libs/lt-tests_database"
+    - "sleep 1"
+    - "make distcheck"
