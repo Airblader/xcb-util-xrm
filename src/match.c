@@ -32,7 +32,12 @@
 #include "util.h"
 
 /* Forward declarations */
-static int __match_matches(xcb_xrm_entry_t *db_entry, xcb_xrm_entry_t *query_name, xcb_xrm_entry_t *query_class,
+static int __match_matches(
+        xcb_xrm_component_t *cur_comp_db,
+        xcb_xrm_component_t *cur_comp_name,
+        xcb_xrm_component_t *cur_comp_class,
+        bool has_class,
+        int position,
         xcb_xrm_match_t *match);
 static int __match_compare(int length, xcb_xrm_match_t *best, xcb_xrm_match_t *candidate);
 static xcb_xrm_match_t *__match_new(int length);
@@ -56,7 +61,14 @@ int __xcb_xrm_match(xcb_xrm_database_t *database, xcb_xrm_entry_t *query_name, x
             return -FAILURE;
 
         /* First we check whether the current database entry even matches. */
-        if (__match_matches(cur_entry, query_name, query_class, cur_match) == 0) {
+        // TODO XXX cleanup
+        bool has_class = query_class != NULL;
+        xcb_xrm_component_t *first_comp_name = TAILQ_FIRST(&(query_name->components));
+        xcb_xrm_component_t *first_comp_class = has_class ? TAILQ_FIRST(&(query_class->components)) : NULL;
+        xcb_xrm_component_t *first_comp_db = TAILQ_FIRST(&(cur_entry->components));
+        if (__match_matches(first_comp_db, first_comp_name, first_comp_class, has_class, 0, cur_match) == 0) {
+            cur_match->entry = cur_entry;
+
             /* The first matching entry is the first one we pick as the best matching entry. */
             if (best_match == NULL) {
                 best_match = cur_match;
@@ -91,79 +103,78 @@ int __xcb_xrm_match(xcb_xrm_database_t *database, xcb_xrm_entry_t *query_name, x
     return -FAILURE;
 }
 
-static int __match_matches(xcb_xrm_entry_t *db_entry, xcb_xrm_entry_t *query_name, xcb_xrm_entry_t *query_class,
+static int __match_matches(
+        xcb_xrm_component_t *cur_comp_db,
+        xcb_xrm_component_t *cur_comp_name,
+        xcb_xrm_component_t *cur_comp_class,
+        bool has_class,
+        int position,
         xcb_xrm_match_t *match) {
-    /* We need to deal with an absent query_class since many applications don't
-     * pass one, even though that violates the specification. */
-    bool use_class = (query_class != NULL);
 
-    xcb_xrm_component_t *cur_comp_name = TAILQ_FIRST(&(query_name->components));
-    xcb_xrm_component_t *cur_comp_class = use_class ? TAILQ_FIRST(&(query_class->components)) : NULL;
-    xcb_xrm_component_t *cur_comp_db = TAILQ_FIRST(&(db_entry->components));
+    // TODO XXX simplify
+    if (cur_comp_name == NULL || (has_class && cur_comp_class == NULL) || cur_comp_db == NULL) {
+        if (cur_comp_db == NULL && cur_comp_name == NULL && (!has_class || cur_comp_class == NULL)) {
+            return SUCCESS;
+        }
+
+        return -FAILURE;
+    }
+
+    if (cur_comp_db->binding_type == BT_LOOSE)
+        match->flags[position] = MF_PRECEDING_LOOSE;
 
 #define ADVANCE(entry) do {                      \
     if (entry != NULL)                           \
         entry = TAILQ_NEXT((entry), components); \
 } while (0)
 
-    int i = 0;
-    while (cur_comp_name != NULL && (!use_class || cur_comp_class) && cur_comp_db != NULL) {
-        if (cur_comp_db->binding_type == BT_LOOSE)
-            match->flags[i] = MF_PRECEDING_LOOSE;
-
-        switch (cur_comp_db->type) {
-            case CT_NORMAL:
-                if (strcmp(cur_comp_db->name, cur_comp_name->name) == 0) {
-                    match->flags[i++] |= MF_NAME;
-
-                    ADVANCE(cur_comp_db);
-                    ADVANCE(cur_comp_name);
-                    ADVANCE(cur_comp_class);
-                } else if (use_class && strcmp(cur_comp_db->name, cur_comp_class->name) == 0) {
-                    match->flags[i++] |= MF_CLASS;
-
-                    ADVANCE(cur_comp_db);
-                    ADVANCE(cur_comp_name);
-                    ADVANCE(cur_comp_class);
-                } else {
-                    if (cur_comp_db->binding_type == BT_TIGHT) {
-                        return -FAILURE;
-                    } else {
-                        /* We remove this flag again because we need to apply
-                         * it to the last component in the matching chain for
-                         * the loose binding. */
-                        match->flags[i] &= ~MF_PRECEDING_LOOSE;
-                        match->flags[i++] |= MF_SKIPPED;
-
-                        ADVANCE(cur_comp_name);
-                        ADVANCE(cur_comp_class);
-                    }
-                }
-
-                break;
-            case CT_WILDCARD:
-                match->flags[i++] |= MF_WILDCARD;
+    switch (cur_comp_db->type) {
+        case CT_NORMAL:
+            if (strcmp(cur_comp_db->name, cur_comp_name->name) == 0) {
+                match->flags[position] |= MF_NAME;
 
                 ADVANCE(cur_comp_db);
                 ADVANCE(cur_comp_name);
                 ADVANCE(cur_comp_class);
+            } else if (has_class && strcmp(cur_comp_db->name, cur_comp_class->name) == 0) {
+                match->flags[position] |= MF_CLASS;
 
-                break;
-            default:
-                /* Never reached. */
-                assert(false);
-                return -FAILURE;
-        }
+                ADVANCE(cur_comp_db);
+                ADVANCE(cur_comp_name);
+                ADVANCE(cur_comp_class);
+            } else {
+                if (cur_comp_db->binding_type == BT_TIGHT) {
+                    return -FAILURE;
+                } else {
+                    /* We remove this flag again because we need to apply
+                     * it to the last component in the matching chain for
+                     * the loose binding. */
+                    match->flags[position] &= ~MF_PRECEDING_LOOSE;
+                    match->flags[position] |= MF_SKIPPED;
+
+                    ADVANCE(cur_comp_name);
+                    ADVANCE(cur_comp_class);
+                }
+            }
+
+            break;
+        case CT_WILDCARD:
+            match->flags[position] |= MF_WILDCARD;
+
+            ADVANCE(cur_comp_db);
+            ADVANCE(cur_comp_name);
+            ADVANCE(cur_comp_class);
+
+            break;
+        default:
+            /* Never reached. */
+            assert(false);
+            return -FAILURE;
     }
 
 #undef ADVANCE
 
-    if (cur_comp_db == NULL && cur_comp_name == NULL && (!use_class || cur_comp_class == NULL)) {
-        match->entry = db_entry;
-        return SUCCESS;
-    }
-
-    return -FAILURE;
+    return __match_matches(cur_comp_db, cur_comp_name, cur_comp_class, has_class, position + 1, match);
 }
 
 static int __match_compare(int length, xcb_xrm_match_t *best, xcb_xrm_match_t *candidate) {
