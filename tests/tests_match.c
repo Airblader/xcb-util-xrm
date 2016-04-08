@@ -121,8 +121,8 @@ static int test_get_resource(void) {
     /* Greediness */
     err |= check_get_resource("a*c.e: 1", "a.b.c.d.c.e", "", "1", false);
     err |= check_get_resource("a*c.e: 1", "a.b.c.c.e", "", "1", false);
+    err |= check_get_resource("a*?.e: 1", "a.b.c.e", "", "1", false);
     // TODO XXX multiple loose bindings
-    // TODO XXX loose binding on a wildcard
 
     /* Precedence rules */
     /* Rule 1 */

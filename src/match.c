@@ -128,7 +128,6 @@ static int __match_matches(
         return -FAILURE;
     }
 
-    // TODO XXX extract match function
     /* If we have a matching component in a loose binding, we need to continue
      * matching both normally and ignoring this match. */
     if (ignore == MI_UNDECIDED && cur_comp_db->binding_type == BT_LOOSE &&
