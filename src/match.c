@@ -32,15 +32,11 @@
 #include "util.h"
 
 /* Forward declarations */
-static int __match_matches(
-        int num_components,
-        xcb_xrm_component_t *cur_comp_db,
-        xcb_xrm_component_t *cur_comp_name,
-        xcb_xrm_component_t *cur_comp_class,
-        bool has_class,
-        int position,
-        xcb_xrm_match_ignore_t ignore,
-        xcb_xrm_match_t **match);
+static int __match_matches(int num_components, xcb_xrm_component_t *cur_comp_db,
+        xcb_xrm_component_t *cur_comp_name, xcb_xrm_component_t *cur_comp_class,
+        bool has_class, int position, xcb_xrm_match_ignore_t ignore, xcb_xrm_match_t **match);
+static xcb_xrm_match_flags_t __match_matches_component(xcb_xrm_component_t *comp_db,
+        xcb_xrm_component_t *comp_name, xcb_xrm_component_t *comp_class);
 static int __match_compare(int length, xcb_xrm_match_t *best, xcb_xrm_match_t *candidate);
 static xcb_xrm_match_t *__match_new(int length);
 static void __match_copy(xcb_xrm_match_t *src, xcb_xrm_match_t *dest, int length);
@@ -103,15 +99,10 @@ int __xcb_xrm_match(xcb_xrm_database_t *database, xcb_xrm_entry_t *query_name, x
     return -FAILURE;
 }
 
-static int __match_matches(
-        int num_components,
-        xcb_xrm_component_t *cur_comp_db,
-        xcb_xrm_component_t *cur_comp_name,
-        xcb_xrm_component_t *cur_comp_class,
-        bool has_class,
-        int position,
-        xcb_xrm_match_ignore_t ignore,
-        xcb_xrm_match_t **match) {
+static int __match_matches(int num_components, xcb_xrm_component_t *cur_comp_db,
+        xcb_xrm_component_t *cur_comp_name, xcb_xrm_component_t *cur_comp_class,
+        bool has_class, int position, xcb_xrm_match_ignore_t ignore, xcb_xrm_match_t **match) {
+    xcb_xrm_match_flags_t comp_match;
 
     if (*match == NULL) {
         *match = __match_new(num_components);
@@ -128,14 +119,12 @@ static int __match_matches(
         return -FAILURE;
     }
 
+    comp_match = __match_matches_component(cur_comp_db, cur_comp_name, cur_comp_class);
+
     /* If we have a matching component in a loose binding, we need to continue
      * matching both normally and ignoring this match. */
     if (ignore == MI_UNDECIDED && cur_comp_db->binding_type == BT_LOOSE &&
-            (
-             cur_comp_db->type == CT_WILDCARD ||
-             strcmp(cur_comp_db->name, cur_comp_name->name) == 0 ||
-             (has_class && strcmp(cur_comp_db->name, cur_comp_class->name) == 0)
-            )) {
+            (comp_match & MF_NAME || comp_match & MF_CLASS || comp_match & MF_WILDCARD)) {
 
         /* Store references / copies to the current parameters for the second call. */
         xcb_xrm_component_t *copy_comp_db = cur_comp_db;
@@ -164,67 +153,60 @@ static int __match_matches(
         return -FAILURE;
     }
 
-    (*match)->flags[position] = MF_NONE;
-    if (cur_comp_db->binding_type == BT_LOOSE)
-        (*match)->flags[position] = MF_PRECEDING_LOOSE;
+    /* Store the match flags on the match so we can use them later for precedence evaluation. */
+    (*match)->flags[position] = comp_match;
+    if (comp_match == MF_NONE)
+        return -FAILURE;
 
 #define ADVANCE(entry) do {                      \
     if (entry != NULL)                           \
         entry = TAILQ_NEXT((entry), components); \
 } while (0)
 
-    if (ignore == MI_IGNORE)
-        goto skip;
-
-    switch (cur_comp_db->type) {
-        case CT_NORMAL:
-            if (strcmp(cur_comp_db->name, cur_comp_name->name) == 0) {
-                (*match)->flags[position] |= MF_NAME;
-
-                ADVANCE(cur_comp_db);
-                ADVANCE(cur_comp_name);
-                ADVANCE(cur_comp_class);
-            } else if (has_class && strcmp(cur_comp_db->name, cur_comp_class->name) == 0) {
-                (*match)->flags[position] |= MF_CLASS;
-
-                ADVANCE(cur_comp_db);
-                ADVANCE(cur_comp_name);
-                ADVANCE(cur_comp_class);
-            } else {
-skip:
-                if (cur_comp_db->binding_type == BT_TIGHT) {
-                    return -FAILURE;
-                } else {
-                    /* We remove this flag again because we need to apply
-                     * it to the last component in the matching chain for
-                     * the loose binding. */
-                    (*match)->flags[position] &= ~MF_PRECEDING_LOOSE;
-                    (*match)->flags[position] |= MF_SKIPPED;
-
-                    ADVANCE(cur_comp_name);
-                    ADVANCE(cur_comp_class);
-                }
-            }
-
-            break;
-        case CT_WILDCARD:
-            (*match)->flags[position] |= MF_WILDCARD;
-
-            ADVANCE(cur_comp_db);
-            ADVANCE(cur_comp_name);
-            ADVANCE(cur_comp_class);
-
-            break;
-        default:
-            /* Never reached. */
-            assert(false);
-            return -FAILURE;
+    /* We have matched this component, so advance to the next one. */
+    ADVANCE(cur_comp_name);
+    ADVANCE(cur_comp_class);
+    /* We advance the pointer to the database entry component if both of the following are true:
+     *  1. This match isn't ignored due to a loose binding path.
+     *  2. It was an actual match and not skipped due to a loose binding. */
+    if (ignore != MI_IGNORE &&
+            (comp_match & MF_NAME || comp_match & MF_CLASS || comp_match & MF_WILDCARD)) {
+        ADVANCE(cur_comp_db);
     }
 
 #undef ADVANCE
 
+    /* Recursively descend to the next component. */
     return __match_matches(num_components, cur_comp_db, cur_comp_name, cur_comp_class, has_class,
             position + 1, MI_UNDECIDED, match);
+}
+
+static xcb_xrm_match_flags_t __match_matches_component(xcb_xrm_component_t *comp_db,
+        xcb_xrm_component_t *comp_name, xcb_xrm_component_t *comp_class) {
+    xcb_xrm_match_flags_t result = MF_NONE;
+    if (comp_db->binding_type == BT_LOOSE)
+        result = MF_PRECEDING_LOOSE;
+
+    if (comp_db->type == CT_NORMAL) {
+        if (strcmp(comp_db->name, comp_name->name) == 0) {
+            result |= MF_NAME;
+        } else if (comp_class != NULL && strcmp(comp_db->name, comp_class->name) == 0) {
+            result |= MF_CLASS;
+        } else {
+            if (comp_db->binding_type == BT_TIGHT)
+                return MF_NONE;
+
+            /* We remove this flag again because we need to apply
+             * it to the last component in the matching chain for
+             * the loose binding. */
+            result &= ~MF_PRECEDING_LOOSE;
+            result |= MF_SKIPPED;
+        }
+    } else {
+        result |= MF_WILDCARD;
+    }
+
+    return result;
 }
 
 static int __match_compare(int length, xcb_xrm_match_t *best, xcb_xrm_match_t *candidate) {
