@@ -35,7 +35,7 @@
 
 /** Information about a matched component. */
 typedef enum xcb_xrm_match_flags_t {
-    MT_NONE = 1 << 0,
+    MF_NONE = 1 << 0,
 
     /* The component was matched on the name. */
     MF_NAME = 1 << 1,
