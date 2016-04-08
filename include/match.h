@@ -35,7 +35,7 @@
 
 /** Information about a matched component. */
 typedef enum xcb_xrm_match_flags_t {
-    MT_NONE = 1 << 0,
+    MF_NONE = 1 << 0,
 
     /* The component was matched on the name. */
     MF_NAME = 1 << 1,
@@ -49,6 +49,16 @@ typedef enum xcb_xrm_match_flags_t {
     /* This component was preceded by a loose binding. */
     MF_PRECEDING_LOOSE = 1 << 5,
 } xcb_xrm_match_flags_t;
+
+/**
+ * Helper enum to decide whether a component in a loose binding shall be
+ * skipped even if it matches.
+ */
+typedef enum xcb_xrm_match_ignore_t {
+    MI_UNDECIDED,
+    MI_IGNORE,
+    MI_DO_NOT_IGNORE,
+} xcb_xrm_match_ignore_t;
 
 typedef struct xcb_xrm_match_t {
     /* Reference to the database entry this match refers to. */
