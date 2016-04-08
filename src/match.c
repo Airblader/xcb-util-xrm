@@ -32,7 +32,6 @@
 #include "util.h"
 
 /* Forward declarations */
-// TODO XXX use a "static info" struct argument to reduce num of arguments
 static int __match_matches(
         int num_components,
         xcb_xrm_component_t *cur_comp_db,
@@ -40,7 +39,7 @@ static int __match_matches(
         xcb_xrm_component_t *cur_comp_class,
         bool has_class,
         int position,
-        int ignore,
+        xcb_xrm_match_ignore_t ignore,
         xcb_xrm_match_t **match);
 static int __match_compare(int length, xcb_xrm_match_t *best, xcb_xrm_match_t *candidate);
 static xcb_xrm_match_t *__match_new(int length);
@@ -62,12 +61,12 @@ int __xcb_xrm_match(xcb_xrm_database_t *database, xcb_xrm_entry_t *query_name, x
         xcb_xrm_match_t *cur_match = NULL;
 
         /* First we check whether the current database entry even matches. */
-        // TODO XXX cleanup
         bool has_class = query_class != NULL;
         xcb_xrm_component_t *first_comp_name = TAILQ_FIRST(&(query_name->components));
         xcb_xrm_component_t *first_comp_class = has_class ? TAILQ_FIRST(&(query_class->components)) : NULL;
         xcb_xrm_component_t *first_comp_db = TAILQ_FIRST(&(cur_entry->components));
-        if (__match_matches(num, first_comp_db, first_comp_name, first_comp_class, has_class, 0, 0, &cur_match) == 0) {
+        if (__match_matches(num, first_comp_db, first_comp_name, first_comp_class, has_class,
+                    0, MI_UNDECIDED, &cur_match) == 0) {
             cur_match->entry = cur_entry;
 
             /* The first matching entry is the first one we pick as the best matching entry. */
@@ -104,7 +103,6 @@ int __xcb_xrm_match(xcb_xrm_database_t *database, xcb_xrm_entry_t *query_name, x
     return -FAILURE;
 }
 
-// TODO XXX int ignore :(
 static int __match_matches(
         int num_components,
         xcb_xrm_component_t *cur_comp_db,
@@ -112,7 +110,7 @@ static int __match_matches(
         xcb_xrm_component_t *cur_comp_class,
         bool has_class,
         int position,
-        int ignore,
+        xcb_xrm_match_ignore_t ignore,
         xcb_xrm_match_t **match) {
 
     if (*match == NULL) {
@@ -121,7 +119,7 @@ static int __match_matches(
             return -FAILURE;
     }
 
-    // TODO XXX simplify
+    /* Check if we reached the end of the recursion. */
     if (cur_comp_name == NULL || (has_class && cur_comp_class == NULL) || cur_comp_db == NULL) {
         if (cur_comp_db == NULL && cur_comp_name == NULL && (!has_class || cur_comp_class == NULL)) {
             return SUCCESS;
@@ -131,30 +129,39 @@ static int __match_matches(
     }
 
     // TODO XXX extract match function
-    if (ignore == 0 && cur_comp_db->binding_type == BT_LOOSE &&
+    /* If we have a matching component in a loose binding, we need to continue
+     * matching both normally and ignoring this match. */
+    if (ignore == MI_UNDECIDED && cur_comp_db->binding_type == BT_LOOSE &&
             (
              cur_comp_db->type == CT_WILDCARD ||
              strcmp(cur_comp_db->name, cur_comp_name->name) == 0 ||
              (has_class && strcmp(cur_comp_db->name, cur_comp_class->name) == 0)
             )) {
 
-        // TODO XXX cleanup
-        xcb_xrm_component_t *x = cur_comp_db;
-        xcb_xrm_component_t *y = cur_comp_name;
-        xcb_xrm_component_t *z = cur_comp_class;
-        xcb_xrm_match_t *xxx = __match_new(num_components);
-        __match_copy(*match, xxx, num_components);
+        /* Store references / copies to the current parameters for the second call. */
+        xcb_xrm_component_t *copy_comp_db = cur_comp_db;
+        xcb_xrm_component_t *copy_comp_name = cur_comp_name;
+        xcb_xrm_component_t *copy_comp_class = cur_comp_class;
+        xcb_xrm_match_t *copy_match = __match_new(num_components);
+        __match_copy(*match, copy_match, num_components);
 
-        if (__match_matches(num_components, cur_comp_db, cur_comp_name, cur_comp_class, has_class, position, -1, match) == 0) {
-            __match_free(xxx);
+        /* First, we try to match normally. */
+        if (__match_matches(num_components, cur_comp_db, cur_comp_name, cur_comp_class, has_class,
+                    position, MI_DO_NOT_IGNORE, match) == 0) {
+            __match_free(copy_match);
             return SUCCESS;
         }
 
+        /* We had no success the first time around, so let's try to reset and
+         * go again, but this time ignoring this match. */
         __match_free(*match);
-        *match = xxx;
-        if (__match_matches(num_components, x, y, z, has_class, position, 1, match) == 0)
+        *match = copy_match;
+        if (__match_matches(num_components, copy_comp_db, copy_comp_name, copy_comp_class, has_class,
+                    position, MI_IGNORE, match) == 0) {
             return SUCCESS;
+        }
 
+        /* Give up. */
         return -FAILURE;
     }
 
@@ -167,21 +174,25 @@ static int __match_matches(
         entry = TAILQ_NEXT((entry), components); \
 } while (0)
 
+    if (ignore == MI_IGNORE)
+        goto skip;
+
     switch (cur_comp_db->type) {
         case CT_NORMAL:
-            if (ignore >= 0 && strcmp(cur_comp_db->name, cur_comp_name->name) == 0) {
+            if (strcmp(cur_comp_db->name, cur_comp_name->name) == 0) {
                 (*match)->flags[position] |= MF_NAME;
 
                 ADVANCE(cur_comp_db);
                 ADVANCE(cur_comp_name);
                 ADVANCE(cur_comp_class);
-            } else if (ignore >= 0 && has_class && strcmp(cur_comp_db->name, cur_comp_class->name) == 0) {
+            } else if (has_class && strcmp(cur_comp_db->name, cur_comp_class->name) == 0) {
                 (*match)->flags[position] |= MF_CLASS;
 
                 ADVANCE(cur_comp_db);
                 ADVANCE(cur_comp_name);
                 ADVANCE(cur_comp_class);
             } else {
+skip:
                 if (cur_comp_db->binding_type == BT_TIGHT) {
                     return -FAILURE;
                 } else {
@@ -198,7 +209,6 @@ static int __match_matches(
 
             break;
         case CT_WILDCARD:
-            // TODO XXX handle ignore
             (*match)->flags[position] |= MF_WILDCARD;
 
             ADVANCE(cur_comp_db);
@@ -214,7 +224,8 @@ static int __match_matches(
 
 #undef ADVANCE
 
-    return __match_matches(num_components, cur_comp_db, cur_comp_name, cur_comp_class, has_class, position + 1, 0, match);
+    return __match_matches(num_components, cur_comp_db, cur_comp_name, cur_comp_class, has_class,
+            position + 1, MI_UNDECIDED, match);
 }
 
 static int __match_compare(int length, xcb_xrm_match_t *best, xcb_xrm_match_t *candidate) {

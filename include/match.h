@@ -50,6 +50,16 @@ typedef enum xcb_xrm_match_flags_t {
     MF_PRECEDING_LOOSE = 1 << 5,
 } xcb_xrm_match_flags_t;
 
+/**
+ * Helper enum to decide whether a component in a loose binding shall be
+ * skipped even if it matches.
+ */
+typedef enum xcb_xrm_match_ignore_t {
+    MI_UNDECIDED,
+    MI_IGNORE,
+    MI_DO_NOT_IGNORE,
+} xcb_xrm_match_ignore_t;
+
 typedef struct xcb_xrm_match_t {
     /* Reference to the database entry this match refers to. */
 	xcb_xrm_entry_t *entry;
