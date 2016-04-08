@@ -118,6 +118,11 @@ static int test_get_resource(void) {
             "First: 1\n"
             "Second: 2\n",
             "Second", "", "2", false);
+    /* Greediness */
+    err |= check_get_resource("a*c.e: 1", "a.b.c.d.c.e", "", "1", false);
+    err |= check_get_resource("a*c.e: 1", "a.b.c.c.e", "", "1", false);
+    // TODO XXX multiple loose bindings
+    // TODO XXX loose binding on a wildcard
 
     /* Precedence rules */
     /* Rule 1 */
