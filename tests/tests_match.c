@@ -29,7 +29,6 @@
 #include <string.h>
 #include <limits.h>
 
-#include <X11/Xlib-xcb.h>
 #include <X11/Xresource.h>
 
 #include "tests_utils.h"

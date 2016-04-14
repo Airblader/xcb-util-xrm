@@ -24,9 +24,9 @@ AC_ARG_ENABLE([tests],
 	      [],
 	      [enable_tests=check])
 AS_CASE(["$enable_tests"],
-	[yes], [PKG_CHECK_MODULES([XLIB], [x11 x11-xcb], [enable_tests=yes])],
+	[yes], [PKG_CHECK_MODULES([XLIB], [x11], [enable_tests=yes])],
 	[no], [enable_tests=no],
-	[PKG_CHECK_MODULES([XLIB], [x11 x11-xcb], [enable_tests=yes], [enable_tests=no])])
+	[PKG_CHECK_MODULES([XLIB], [x11], [enable_tests=yes], [enable_tests=no])])
 AM_CONDITIONAL(ENABLE_TESTS, [test "x$enable_tests" = "xyes"])
 
 AC_OUTPUT([Makefile
