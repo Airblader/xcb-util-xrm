@@ -41,15 +41,15 @@ TESTS = $(DIRECT_TESTS) tests/tests_database_runner.sh
 check_PROGRAMS = $(DIRECT_TESTS) tests/tests_database
 
 tests_tests_parser_SOURCES = tests/tests_utils.c tests/tests_parser.c
-tests_tests_parser_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS) $(XLIB_CFLAGS)
-tests_tests_parser_LDADD = libxcb-xrm.la $(XCB_LIBS) $(XLIB_LIBS)
+tests_tests_parser_CPPFLAGS = -I$(srcdir)/include/
+tests_tests_parser_LDADD = libxcb-xrm.la
 
 tests_tests_match_SOURCES = tests/tests_utils.c tests/tests_match.c
-tests_tests_match_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS) $(XLIB_CFLAGS)
-tests_tests_match_LDADD = libxcb-xrm.la $(XCB_LIBS) $(XLIB_LIBS)
+tests_tests_match_CPPFLAGS = -I$(srcdir)/include/ $(XLIB_CFLAGS)
+tests_tests_match_LDADD = libxcb-xrm.la $(XLIB_LIBS)
 
 tests_tests_database_SOURCES = tests/tests_utils.c tests/tests_database.c
-tests_tests_database_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS) $(XLIB_CFLAGS)
-tests_tests_database_LDADD = libxcb-xrm.la $(XCB_LIBS) $(XLIB_LIBS)
+tests_tests_database_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS) $(XCB_AUX_CFLAGS)
+tests_tests_database_LDADD = libxcb-xrm.la $(XCB_LIBS) $(XCB_AUX_LIBS)
 
 endif
