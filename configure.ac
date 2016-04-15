@@ -16,18 +16,7 @@ XCB_UTIL_M4_WITH_INCLUDE_PATH
 XCB_UTIL_COMMON([1.4], [1.6])
 
 PKG_CHECK_MODULES(XCB_AUX, xcb-aux)
-
-# The tests need Xlib, skip them if not found (unless --enable-tests is given)
-AC_ARG_ENABLE([tests],
-	      [AS_HELP_STRING([--disable-tests],
-			      [disable tests @<:@default=check@:>@])],
-	      [],
-	      [enable_tests=check])
-AS_CASE(["$enable_tests"],
-	[yes], [PKG_CHECK_MODULES([XLIB], [x11 x11-xcb], [enable_tests=yes])],
-	[no], [enable_tests=no],
-	[PKG_CHECK_MODULES([XLIB], [x11 x11-xcb], [enable_tests=yes], [enable_tests=no])])
-AM_CONDITIONAL(ENABLE_TESTS, [test "x$enable_tests" = "xyes"])
+PKG_CHECK_MODULES(XLIB, x11)
 
 AC_OUTPUT([Makefile
 	xcb-xrm.pc

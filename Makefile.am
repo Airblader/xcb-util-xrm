@@ -34,8 +34,6 @@ libxcb_xrm_la_LDFLAGS = -version-info 0:0:0 -no-undefined -export-symbols-regex 
 
 pkgconfig_DATA = xcb-xrm.pc
 
-if ENABLE_TESTS
-
 DIRECT_TESTS = tests/tests_parser tests/tests_match
 TESTS = $(DIRECT_TESTS) tests/tests_database_runner.sh
 check_PROGRAMS = $(DIRECT_TESTS) tests/tests_database
@@ -51,5 +49,3 @@ tests_tests_match_LDADD = libxcb-xrm.la $(XLIB_LIBS)
 tests_tests_database_SOURCES = tests/tests_utils.c tests/tests_database.c
 tests_tests_database_CPPFLAGS = -I$(srcdir)/include/ $(XCB_CFLAGS) $(XCB_AUX_CFLAGS)
 tests_tests_database_LDADD = libxcb-xrm.la $(XCB_LIBS) $(XCB_AUX_LIBS)
-
-endif
