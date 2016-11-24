@@ -107,6 +107,9 @@ static int test_get_resource(void) {
     err |= check_get_resource("First: x\\\ny", "First", "", "xy", false);
     err |= check_get_resource("! First: x", "First", "", NULL, false);
     err |= check_get_resource("# First: x", "First", "", NULL, false);
+    err |= check_get_resource("First:", "First", "", "", false);
+    err |= check_get_resource("First: ", "First", "", "", false);
+    err |= check_get_resource("First: \t ", "First", "", "", false);
     /* Matching among multiple entries */
     err |= check_get_resource(
             "First: 1\n"
@@ -204,7 +207,7 @@ static int test_convert(void) {
     bool err = false;
 
     err |= check_convert_to_bool(NULL, false, -2);
-    err |= check_convert_to_bool("", false, -2);
+    err |= check_convert_to_bool("", false, -1);
     err |= check_convert_to_bool("0", false, 0);
     err |= check_convert_to_bool("1", true, 0);
     err |= check_convert_to_bool("10", true, 0);
@@ -223,7 +226,7 @@ static int test_convert(void) {
     err |= check_convert_to_bool("abc", false, -1);
 
     err |= check_convert_to_long(NULL, LONG_MIN, -2);
-    err |= check_convert_to_long("", LONG_MIN, -2);
+    err |= check_convert_to_long("", LONG_MIN, -1);
     err |= check_convert_to_long("0", 0, 0);
     err |= check_convert_to_long("1", 1, 0);
     err |= check_convert_to_long("-1", -1, 0);
