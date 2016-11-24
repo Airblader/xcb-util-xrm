@@ -255,7 +255,7 @@ process_normally:
         }
     }
 
-    if (state.chunk == CS_VALUE) {
+    if (state.chunk == CS_PRE_VALUE_WHITESPACE || state.chunk == CS_VALUE) {
         *value_walk = '\0';
         entry->value = strdup(value);
         if (entry->value == NULL)
