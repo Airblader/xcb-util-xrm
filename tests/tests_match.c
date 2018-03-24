@@ -95,6 +95,7 @@ static int test_get_resource(void) {
     err |= check_get_resource("First.?.third: 1", "First.second.third", "", "1", false);
     err |= check_get_resource("First.?.?.fourth: 1", "First.second.third.fourth", "", "1", false);
     err |= check_get_resource("*second: 1", "First.second", "", "1", false);
+    err |= check_get_resource(".second: 1", "First.second", "", NULL, false);
     err |= check_get_resource("*third: 1", "First.second.third", "", "1", false);
     err |= check_get_resource("First*second: 1", "First.second", "", "1", false);
     err |= check_get_resource("First*third: 1", "First.second.third", "", "1", false);
@@ -110,6 +111,17 @@ static int test_get_resource(void) {
     err |= check_get_resource("First:", "First", "", "", false);
     err |= check_get_resource("First: ", "First", "", "", false);
     err |= check_get_resource("First: \t ", "First", "", "", false);
+    /* Consecutive bindings */
+    err |= check_get_resource("*.bar: 1", "foo.foo.bar", "", "1", false);
+    err |= check_get_resource("...bar: 1", "foo.bar", "", NULL, false);
+    err |= check_get_resource("...bar: 1", "foo.foo.foo.bar", "", NULL, false);
+    err |= check_get_resource("***bar: 1", "foo.bar", "", "1", false);
+    err |= check_get_resource(".*.bar: 1", "foo.bar", "", "1", false);
+    err |= check_get_resource(".*.bar: 1", "foo.foo.bar", "", "1", false);
+    err |= check_get_resource("..*bar: 1", "foo.foo.foo.foo.bar", "", "1", false);
+    err |= check_get_resource("a.*.z: 1", "a.b.c.d.e.f.z", "", "1", false);
+    err |= check_get_resource("a...z: 1", "a.z", "", "1", false);
+    err |= check_get_resource("a...z: 1", "a.b.z", "", NULL, false);
     /* Matching among multiple entries */
     err |= check_get_resource(
             "First: 1\n"
